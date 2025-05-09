@@ -34,21 +34,21 @@ def handle_nan_values(rgb_data, timestamps):
         return None, None
 
     if not np.all(np.diff(cleaned_timestamps) > 0):
-         print("Warning: Timestamps are not strictly increasing after NaN removal. Attempting to fix.")
-         unique_indices = np.unique(cleaned_timestamps, return_index=True)[1]
-         unique_indices = np.sort(unique_indices)
-         cleaned_timestamps = cleaned_timestamps[unique_indices]
-         cleaned_rgb = cleaned_rgb[unique_indices]
-         if cleaned_rgb.shape[0] < MIN_SAMPLES_FOR_POS or not np.all(np.diff(cleaned_timestamps) > 0):
-             print("Error: Cannot fix non-monotonic timestamps or insufficient data after fixing.")
-             return None, None
+        print("Warning: Timestamps are not strictly increasing after NaN removal. Attempting to fix.")
+        unique_indices = np.unique(cleaned_timestamps, return_index=True)[1]
+        unique_indices = np.sort(unique_indices)
+        cleaned_timestamps = cleaned_timestamps[unique_indices]
+        cleaned_rgb = cleaned_rgb[unique_indices]
+        if cleaned_rgb.shape[0] < MIN_SAMPLES_FOR_POS or not np.all(np.diff(cleaned_timestamps) > 0):
+            print("Error: Cannot fix non-monotonic timestamps or insufficient data after fixing.")
+            return None, None
 
     return cleaned_rgb, cleaned_timestamps
 
 def apply_pos_projection(rgb_buffer):
     if rgb_buffer is None or rgb_buffer.shape[0] < MIN_SAMPLES_FOR_POS:
         print(f'''POS requires at least {MIN_SAMPLES_FOR_POS} samples, 
-              got {rgb_buffer.shape[0] if rgb_buffer is not None else 0}''')
+            got {rgb_buffer.shape[0] if rgb_buffer is not None else 0}''')
         return None
 
     # Normalize by mean per channel
@@ -96,7 +96,7 @@ def resample_signal(signal, original_timestamps, target_fps=None):
     if target_fps is None:
         num_samples = len(original_timestamps)
         estimated_fps = (num_samples - 1) / duration
-        actual_target_fps = round(estimated_fps) # Use estimated FPS
+        actual_target_fps = round(estimated_fps)
         if actual_target_fps <= 0: actual_target_fps = DEFAULT_TARGET_FPS
         print(f"Resampling: Estimated FPS = {estimated_fps:.2f}, Target FPS = {actual_target_fps}")
     else:
@@ -125,40 +125,38 @@ def resample_signal(signal, original_timestamps, target_fps=None):
         return None, None, None
 
 def apply_butterworth_bandpass(signal_buffer, low_cut_hz, high_cut_hz, fps, order=5):
-  if signal_buffer is None or fps <= 0:
-    return None
-  if len(signal_buffer) <= order * 3:
-      print(f"Warning: Signal length ({len(signal_buffer)}) too short for filter order ({order}).")
-      return None
+    if signal_buffer is None or fps <= 0:
+        return None
+    if len(signal_buffer) <= order * 3:
+        print(f"Warning: Signal length ({len(signal_buffer)}) too short for filter order ({order}).")
+        return None
 
-  nyquist = 0.5 * fps
-  low = low_cut_hz / nyquist
-  high = high_cut_hz / nyquist
+    nyquist = 0.5 * fps
+    low = low_cut_hz / nyquist
+    high = high_cut_hz / nyquist
 
-  # Validate cutoff frequencies against Nyquist
-  if low <= 0:
-      print(f"Warning: Low cut frequency ({low_cut_hz} Hz) is too low, adjusting to small positive value.")
-      low = 0.01 # Avoid zero frequency
-  if high >= 1:
-    print(f"Warning: High cut frequency ({high_cut_hz} Hz) is >= Nyquist Freq ({nyquist} Hz). Clamping.")
-    high = 0.99 # Avoid instability at Nyquist edge
+    if low <= 0:
+        print(f"Warning: Low cut frequency ({low_cut_hz} Hz) is too low, adjusting to small positive value.")
+        low = 0.01 # Avoiding zero frequency
+    if high >= 1:
+        print(f"Warning: High cut frequency ({high_cut_hz} Hz) is >= Nyquist Freq ({nyquist} Hz). Clamping.")
+        high = 0.99
 
-  if low >= high:
-       print(f"Error: Low cut frequency ({low*nyquist:.2f} Hz) is >= high cut frequency ({high*nyquist:.2f} Hz). Cannot create bandpass filter.")
-       return None
+    if low >= high:
+        print(f"Error: Low cut frequency ({low*nyquist:.2f} Hz) is >= high cut frequency ({high*nyquist:.2f} Hz). Cannot create bandpass filter.")
+        return None
 
-  try:
-      b, a = scipy.signal.butter(order, [low, high], btype='band')
-      filtered_signal = scipy.signal.filtfilt(b, a, signal_buffer)
-      return filtered_signal
-  except ValueError as e:
-      print(f"Error applying Butterworth filter: {e}")
-      return None
+    try:
+        b, a = scipy.signal.butter(order, [low, high], btype='band')
+        filtered_signal = scipy.signal.filtfilt(b, a, signal_buffer)
+        return filtered_signal
+    except ValueError as e:
+        print(f"Error applying Butterworth filter: {e}")
+        return None
 
 def calculate_signal_quality(filtered_resampled_signal, fps):
     if filtered_resampled_signal is None or len(filtered_resampled_signal) < MIN_SAMPLES_FOR_QUALITY or fps <= 0:
         return 0.0
-
     try:
         # Power Spectral Density on the uniformly sampled signal
         freqs, power_spectrum = scipy.signal.welch(
@@ -168,8 +166,8 @@ def calculate_signal_quality(filtered_resampled_signal, fps):
         # Power in the desired heart rate band
         band_mask = (freqs >= BAND_MIN_HZ) & (freqs <= BAND_MAX_HZ)
         if not np.any(band_mask):
-             print("Warning: No frequency components found in the target HR band for quality assessment.")
-             return 0.0
+            print("Warning: No frequency components found in the target HR band for quality assessment.")
+            return 0.0
 
         power_in_band = np.sum(power_spectrum[band_mask])
 
@@ -181,33 +179,51 @@ def calculate_signal_quality(filtered_resampled_signal, fps):
 
         total_power = np.sum(power_spectrum[total_mask])
         
+        if total_power <= 1e-10:
+            print("Warning: Total power is near zero. Setting quality to 0.")
+            return 0.0
+        
+        # Ensuring power_in_band does not exceed total_power
+        power_in_band = min(power_in_band, total_power) 
         noise_power = total_power - power_in_band
-        if noise_power <= 1e-10:
-            signal_to_noise = 10.0
-        else:
-             signal_to_noise = power_in_band / noise_power
-             signal_to_noise = min(signal_to_noise, 10.0)
+        
+        # Use a small epsilon to avoid division by zero
+        epsilon = 1e-10 
+        signal_to_noise_raw = power_in_band / (noise_power + epsilon)
+        
+        # Cap the SNR value before normalization
+        capped_snr = min(signal_to_noise_raw, 10.0) # Cap raw SNR
 
         # Signal Variance
         signal_variance = np.var(filtered_resampled_signal)
-        # Scaling factor
-        variance_factor = np.clip(signal_variance * 1000, 0.0, 1.0)
+        
+        # Variance factor
+        variance_factor = np.clip(signal_variance * 1000, 0.0, 1.0) 
 
         # Combine Factors into Quality Score
         w_snr = 0.7
         w_var = 0.3
-        quality_score = (w_snr * (signal_to_noise / 10.0)) + (w_var * variance_factor) # Normalize SNR
+        
+        # Use the capped SNR normalized
+        quality_score_unscaled = (w_snr * (capped_snr / 10.0)) + (w_var * variance_factor) 
 
         # Scale to 0-10
-        return np.clip(quality_score * 10.0, 0.0, 10.0)
+        final_quality_score = np.clip(quality_score_unscaled * 10.0, 0.0, 10.0)
+
+        # Detailed Logging
+        print(f"  Quality Calc: P_band={power_in_band:.4e}, P_total={total_power:.4e}, SNR_raw={signal_to_noise_raw:.2f}, SNR_capped={capped_snr:.2f}, Var={signal_variance:.4e}, Var_factor={variance_factor:.3f}, Score={final_quality_score:.2f}")
+
+        return final_quality_score
 
     except Exception as e:
         print(f"Error calculating signal quality: {e}")
+        import traceback
+        traceback.print_exc()
         return 0.0
 
 def select_best_pos_signal(input_data):
     # Data Preprocessing
-    timestamps_np = np.array(input_data["timestamp"])
+    timestamps_np = np.array(input_data["timestamps"])
     region_data_with_timestamps = {}
     for region in ["forehead", "left_cheek", "right_cheek"]:
         if region in input_data and len(input_data[region]) == len(timestamps_np):
@@ -218,7 +234,7 @@ def select_best_pos_signal(input_data):
             }
         else:
             print(f"Skipping region {region} due to missing data or length mismatch.")
-  
+
     best_filtered_pos_resampled = None
     best_original_rgb = None
     best_original_timestamps = None
@@ -252,6 +268,12 @@ def select_best_pos_signal(input_data):
             if pos_signal is None:
                 print(f"Skipping {region_name}: POS projection failed.")
                 continue
+            
+            # Timestamp Range Logging
+            if len(cleaned_timestamps) > 1:
+                time_range = cleaned_timestamps[-1] - cleaned_timestamps[0]
+                print(f"DEBUG: Timestamp range for resampling: {time_range:.3f} s (from {cleaned_timestamps[0]:.3f} to {cleaned_timestamps[-1]:.3f})")
+
 
             # Resample POS signal to uniform grid
             pos_resampled, uniform_timestamps, target_fps = resample_signal(pos_signal, cleaned_timestamps, target_fps=None)
@@ -294,4 +316,4 @@ def select_best_pos_signal(input_data):
     else:
         print("\nNo suitable region found for vital sign extraction.")
         return None, None, None, None, None, -1.0
-      
+    

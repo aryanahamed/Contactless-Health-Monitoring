@@ -14,6 +14,8 @@ from config import (
     LOMB_SCARGLE_FREQ_POINTS,
 )
 
+from pos_processing import apply_butterworth_bandpass
+
 def find_signal_peaks(filtered_resampled_signal, target_fps):
     if filtered_resampled_signal is None or len(filtered_resampled_signal) == 0 or target_fps <= 0:
         print("Invalid signal or FPS for peak finding.")
@@ -25,8 +27,8 @@ def find_signal_peaks(filtered_resampled_signal, target_fps):
         print("Signal standard deviation is zero, cannot determine prominence.")
         return None
     
-    prominence_threshold = signal_std * 0.5
-    height_threshold = None # Using only prominence for now
+    prominence_threshold = signal_std * 0.4
+    height_threshold = None
 
     try:
         peaks = scipy.signal.find_peaks(
@@ -36,8 +38,8 @@ def find_signal_peaks(filtered_resampled_signal, target_fps):
             height=height_threshold
         )
 
-        if len(peaks) > 0:
-            print(f"Found {len(peaks)} peaks in resampled signal.")
+        if len(peaks[0]) > 0:
+            print(f"Found {len(peaks[0])} peaks in resampled signal.")
             return peaks
         else:
             print("No peaks found in the filtered resampled signal.")
@@ -61,8 +63,8 @@ def map_resampled_peaks_to_original_timestamps(resampled_peak_indices, uniform_t
         
         # Ensure original_timestamps are sorted
         if not np.all(np.diff(original_timestamps) >= 0):
-             print("Warning: Original timestamps not sorted for mapping. Sorting now.")
-             original_timestamps = np.sort(original_timestamps)
+            print("Warning: Original timestamps not sorted for mapping. Sorting now.")
+            original_timestamps = np.sort(original_timestamps)
 
         # Find the closest original timestamps to the resampled peak times
         closest_orig_indices = np.searchsorted(original_timestamps, peak_times_uniform, side='left')
@@ -103,8 +105,8 @@ def calculate_hr_hrv(peak_timestamps):
     ibis_sec = np.diff(peak_timestamps)
 
     if len(ibis_sec) < MIN_PEAKS_FOR_HRV -1 : # Need at least N-1 IBIs for N peaks
-         print(f"Not enough IBIs ({len(ibis_sec)}) derived from peaks for HRV.")
-         return None
+        print(f"Not enough IBIs ({len(ibis_sec)}) derived from peaks for HRV.")
+        return None
 
     # Filter by physiological range
     valid_mask_physio = (ibis_sec >= MIN_VALID_IBI_S) & (ibis_sec <= MAX_VALID_IBI_S)
@@ -177,28 +179,42 @@ def extract_breathing_signal(rgb_buffer, timestamps):
 
     if cleaned_rgb.shape[0] < MIN_SAMPLES_FOR_BR:
         print(f'''BR extraction failed: Need {MIN_SAMPLES_FOR_BR} samples after NaN removal,
-              got {cleaned_rgb.shape[0]}.''')
+            got {cleaned_rgb.shape[0]}.''')
         return None, None
+    
+    if len(cleaned_timestamps) > 1:
+        approx_fps = 1.0 / np.mean(np.diff(cleaned_timestamps))
+    else:
+        approx_fps = 1.0
 
     # Select Green Channel
     green_signal = cleaned_rgb[:, 1]
 
     # Detrend
     detrended_green = scipy.signal.detrend(green_signal, type='linear')
+    
+    filtered_breathing_signal = apply_butterworth_bandpass(
+        detrended_green, MIN_BR_HZ, MAX_BR_HZ, approx_fps, order=2 
+    )
+    
+    if filtered_breathing_signal is None:
+        print("BR extraction failed: Filtering step failed.")
+        return None, None
 
     # Normalize
-    mean_green = np.mean(detrended_green)
-    std_green = np.std(detrended_green)
+    mean_green = np.mean(filtered_breathing_signal)
+    std_green = np.std(filtered_breathing_signal)
     if std_green == 0:
-        print("BR extraction failed: Green channel standard deviation is zero after detrending.")
+        print("BR extraction failed: Filtered green channel standard deviation is zero.")
         return None, None
-    detrended_normalized_green = (detrended_green - mean_green) / std_green
+    
+    detrended_normalized_green = (filtered_breathing_signal - mean_green) / std_green
 
-    print(f"Breathing signal extracted using {len(cleaned_timestamps)} samples.")
+    print(f"Breathing signal extracted and filtered using {len(cleaned_timestamps)} samples.")
     return detrended_normalized_green, cleaned_timestamps
 
 
-def calculate_breathing_rate_lombscargle(breathing_signal, timestamps, plot_spectrum=False):
+def calculate_breathing_rate_lombscargle(breathing_signal, timestamps, plot_spectrum=True):
     if breathing_signal is None or timestamps is None:
         print("BR calculation failed: Invalid input signal or timestamps.")
         return None
@@ -215,24 +231,27 @@ def calculate_breathing_rate_lombscargle(breathing_signal, timestamps, plot_spec
         # Find the peak power within the BR band
         br_band_mask = (frequencies_hz >= MIN_BR_HZ) & (frequencies_hz <= MAX_BR_HZ)
         if not np.any(br_band_mask):
-             print("BR calculation failed: No frequencies evaluated within the defined BR band.")
-             return None
+            print("BR calculation failed: No frequencies evaluated within the defined BR band.")
+            return None
 
         power_in_band = power[br_band_mask]
         freqs_in_band = frequencies_hz[br_band_mask]
 
         if len(power_in_band) == 0:
-             print("BR calculation failed: Error filtering frequencies in the BR band.")
-             return None
+            print("BR calculation failed: Error filtering frequencies in the BR band.")
+            return None
 
         peak_index_in_band = np.argmax(power_in_band)
+        peak_power = power_in_band[peak_index_in_band]
         dominant_freq_hz = freqs_in_band[peak_index_in_band]
         breathing_rate_bpm = dominant_freq_hz * 60.0
-
+        
+        # Add peak power to log
+        print(f"Calculated Breathing Rate: {breathing_rate_bpm:.1f} BPM (from {dominant_freq_hz:.3f} Hz, Power: {peak_power:.4f})")     
         print(f"Calculated Breathing Rate: {breathing_rate_bpm:.1f} BPM (from {dominant_freq_hz:.3f} Hz)")
 
         if breathing_rate_bpm < (MIN_BR_HZ * 60 * 0.9) or breathing_rate_bpm > (MAX_BR_HZ * 60 * 1.1):
-             print(f"Calculated BR {breathing_rate_bpm:.1f} BPM is outside expected range after peak finding.")
+            print(f"Calculated BR {breathing_rate_bpm:.1f} BPM is outside expected range after peak finding.")
         return breathing_rate_bpm
 
     except Exception as e:
@@ -240,4 +259,3 @@ def calculate_breathing_rate_lombscargle(breathing_signal, timestamps, plot_spec
         import traceback
         traceback.print_exc()
         return None
-    
