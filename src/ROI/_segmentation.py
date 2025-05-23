@@ -5,7 +5,7 @@ from mediapipe.tasks import python as mp_python
 from mediapipe.tasks.python.vision import ImageSegmenter
 from mediapipe.tasks.python.vision import image_segmenter
 import mediapipe as mp
-import core.config as config
+import config as config
 
 # how do I use gpu delegate for this
 

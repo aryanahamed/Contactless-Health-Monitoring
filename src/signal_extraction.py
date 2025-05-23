@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.signal
 import scipy.stats
-from core.config import (
+from config import (
     MAX_HR_HZ,
     MIN_PEAKS_FOR_HRV,
     MIN_VALID_IBI_S,

@@ -4,9 +4,9 @@ from ROI.visualization import draw_points
 from timeseries.manager import Manager
 import cv2
 import matplotlib.pyplot as plt
-from core.signal_pipeline import process_signals
+from signal_pipeline import process_signals
 from ui.ui_overlay import draw_results_on_frame
-from core.config import GROUND_TRUTH
+from config import GROUND_TRUTH
 import numpy as np
 from debug.ground_truth_analysis import analyze_ground_truth_vs_calculated, load_ground_truth_hr
 
@@ -23,7 +23,7 @@ def main():
         from debug.debug_plots import setup_debug_figures
         signal_figure, signal_ax, br_ax, rgb_diag_fig, rgb_diag_axs = setup_debug_figures()
     vis_frame = None
-    ground_truth_hr = load_ground_truth_hr(GROUND_TRUTH)
+    # ground_truth_hr = load_ground_truth_hr(GROUND_TRUTH)
     calculated_hr = []
     while True:
         frame, timestamp = capture.get_frame()
@@ -48,7 +48,7 @@ def main():
         plt.close(rgb_diag_fig)
     capture.stop()
     cv2.destroyAllWindows()
-    analyze_ground_truth_vs_calculated(ground_truth_hr, calculated_hr)
+    # analyze_ground_truth_vs_calculated(ground_truth_hr, calculated_hr)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 import threading
 import collections
 import cv2
-from core.config import camera_id
+from config import camera_id
 import time
 import os
 import psutil

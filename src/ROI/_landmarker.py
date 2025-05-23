@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import mediapipe as mp
 from mediapipe.tasks.python.vision import FaceLandmarker
-from core.config import get_face_landmarker_options
+from config import get_face_landmarker_options
 
 class FaceLandmarkerWrapper:
     def __init__(self):

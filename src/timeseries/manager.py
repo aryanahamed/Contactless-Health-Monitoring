@@ -1,5 +1,5 @@
 from collections import deque
-import core.config as config
+import config as config
 import numpy as np
 from .spatial_average import sa_region
 

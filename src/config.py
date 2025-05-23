@@ -9,7 +9,7 @@ from mediapipe.tasks.python.vision.face_landmarker import FaceLandmarkerOptions
 
 
 # camera settings
-camera_id = "test_inputs/vid.avi" # depends on ur device figure it out
+camera_id = 0 # depends on ur device figure it out
 GROUND_TRUTH = "test_inputs/ground_truth.txt"
 frame_width = 640 #640
 frame_height = 480 #480

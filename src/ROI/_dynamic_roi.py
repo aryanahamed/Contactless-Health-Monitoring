@@ -1,5 +1,5 @@
 import math
-from core.config import roi_landmarks
+from config import roi_landmarks
 import numpy as np
 import cv2
 

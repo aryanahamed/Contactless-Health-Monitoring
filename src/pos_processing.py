@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.signal
-from core.config import (
+from config import (
     MIN_SAMPLES_FOR_POS,
     MIN_SAMPLES_FOR_QUALITY,
     BAND_MIN_HZ,
