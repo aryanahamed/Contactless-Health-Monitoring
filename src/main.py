@@ -25,7 +25,6 @@ def main():
     vis_frame = None
     ground_truth_hr = load_ground_truth_hr(GROUND_TRUTH)
     calculated_hr = []
-    frame_idx = 0
     while True:
         frame, timestamp = capture.get_frame()
         if frame is None:
@@ -39,7 +38,6 @@ def main():
             last_hr, last_sdnn, last_rmssd, last_br, last_quality, hrv_quality_status = process_signals(
                 series, enable_signal_debug, br_ax, signal_ax=signal_ax, rgb_diag_axs=rgb_diag_axs)
         calculated_hr.append(last_hr if last_hr is not None else np.nan)
-        frame_idx += 1
         vis_frame = draw_results_on_frame(vis_frame, last_hr, last_sdnn, last_rmssd, last_br, last_quality, hrv_quality_status)
         cv2.imshow('ROI', vis_frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):

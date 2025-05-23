@@ -1,6 +1,6 @@
 from pos_processing import select_best_pos_signal
 from signal_extraction import (
-    find_signal_peaks, calculate_hr_hrv, extract_breathing_signal, calculate_breathing_rate_fft
+    find_signal_peaks, calculate_hr_hrv, extract_breathing_signal, calculate_breathing_rate_welch
 )
 from debug.debug_plots import (
     plot_ppg_signal, plot_breathing_signal, plot_rgb_diagnostics,
@@ -9,9 +9,6 @@ from debug.debug_plots import (
 
 def process_signals(series, enable_signal_debug, br_ax, signal_ax=None, rgb_diag_axs=None):
     best_filt, best_rgb, best_ts, best_fps, quality = select_best_pos_signal(series)
-    last_hr = last_sdnn = last_rmssd = last_br = None
-    hrv_quality_status = 'N/A'
-    br_signal = br_ts = None
 
     if enable_signal_debug and best_rgb is not None and rgb_diag_axs is not None and PLOT_RGB_DIAG:
         plot_rgb_diagnostics(rgb_diag_axs, best_rgb)
@@ -37,7 +34,7 @@ def process_signals(series, enable_signal_debug, br_ax, signal_ax=None, rgb_diag
             br_signal, br_ts = extract_breathing_signal(best_rgb, best_ts)
             if enable_signal_debug and br_signal is not None and PLOT_BR:
                 plot_breathing_signal(br_ax, br_signal)
-            current_br = calculate_breathing_rate_fft(br_signal, br_ts)
+            current_br = calculate_breathing_rate_welch(br_signal, br_ts)
             if current_br is not None:
                 last_br = current_br
                 print(f"BR Result (updated): {last_br:.1f} BPM")

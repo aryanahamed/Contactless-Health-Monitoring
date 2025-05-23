@@ -9,8 +9,8 @@ from mediapipe.tasks.python.vision.face_landmarker import FaceLandmarkerOptions
 
 
 # camera settings
-camera_id = "vid.avi" # depends on ur device figure it out
-GROUND_TRUTH = "ground_truth.txt"
+camera_id = "test_inputs/vid.avi" # depends on ur device figure it out
+GROUND_TRUTH = "test_inputs/ground_truth.txt"
 frame_width = 640 #640
 frame_height = 480 #480
 
@@ -70,8 +70,8 @@ def get_face_landmarker_options():
 # -- pos_processing -- #
 BAND_MIN_HZ = 0.67  # 40 BPM
 BAND_MAX_HZ = 3.33   # 200 BPM
-MIN_SAMPLES_FOR_POS = 250
-MIN_SAMPLES_FOR_QUALITY = 250
+MIN_SAMPLES_FOR_POS = 300
+MIN_SAMPLES_FOR_QUALITY = 300
 DEFAULT_TARGET_FPS = 30.0
 
 
@@ -85,8 +85,6 @@ MAX_ACCEPTABLE_RMSSD_MS = 300
 
 MIN_BR_HZ = 0.1  # 6 breaths per minute
 MAX_BR_HZ = 0.5  # 30 breaths per minute
-MIN_SAMPLES_FOR_BR = 250
-LOMB_SCARGLE_FREQ_POINTS = 1000
-MIN_PEAK_POWER_LOMB = 0.1 
+MIN_SAMPLES_FOR_BR = 300
 
 
