@@ -14,6 +14,8 @@ from config import (
 )
 
 from pos_processing import apply_butterworth_bandpass
+from pos_processing import handle_nan_values
+
 
 def find_signal_peaks(filtered_signal, target_fps):
     if filtered_signal is None or len(filtered_signal) == 0 or target_fps <= 0:
@@ -77,7 +79,6 @@ def calculate_hr_hrv(peak_timestamps):
 
 
 def extract_breathing_signal(rgb_buffer, timestamps):
-    from pos_processing import handle_nan_values
     cleaned_rgb, cleaned_timestamps = handle_nan_values(rgb_buffer, timestamps)
     if cleaned_rgb is None or cleaned_timestamps is None:
         return None, None

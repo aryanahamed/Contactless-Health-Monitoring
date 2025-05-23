@@ -99,6 +99,7 @@ def select_best_pos_signal(input_data):
     best_original_timestamps = None
     best_fps = None
     highest_quality = -1.0
+    fps = DEFAULT_TARGET_FPS
     for region, data in region_data_with_timestamps.items():
         rgb_buffer = data.get('rgb')
         timestamps = data.get('timestamps')
