@@ -8,7 +8,8 @@ from signal_pipeline import process_signals
 from ui.ui_overlay import draw_results_on_frame
 from config import GROUND_TRUTH
 import numpy as np
-from debug.ground_truth_analysis import analyze_ground_truth_vs_calculated, load_ground_truth_hr
+import time
+# from debug.ground_truth_analysis import analyze_ground_truth_vs_calculated, load_ground_truth_hr
 
 
 def main():
@@ -16,19 +17,20 @@ def main():
     series_generator = Manager()
     capture = CaptureThread()
     capture.start()
-    wait_for_startup(capture, delay_sec=0)
+    wait_for_startup(capture, delay_sec=0.5)
     enable_signal_debug = True
     signal_figure, signal_ax, br_ax, rgb_diag_fig, rgb_diag_axs = None, None, None, None, None
-    if enable_signal_debug:
-        from debug.debug_plots import setup_debug_figures
-        signal_figure, signal_ax, br_ax, rgb_diag_fig, rgb_diag_axs = setup_debug_figures()
+    # if enable_signal_debug:
+    #     from debug.debug_plots import setup_debug_figures
+    #     signal_figure, signal_ax, br_ax, rgb_diag_fig, rgb_diag_axs = setup_debug_figures()
     vis_frame = None
     # ground_truth_hr = load_ground_truth_hr(GROUND_TRUTH)
     calculated_hr = []
     while True:
         frame, timestamp = capture.get_frame()
         if frame is None:
-            break
+            time.sleep(0.01)
+            continue
         roi_class.process_frame(frame, timestamp)
         vis_frame = draw_points(frame, roi_class.roi_cords, roi_class.theta) if roi_class.roi_cords is not None else frame.copy()
         series = series_generator.get_series(roi_class.patches, timestamp) if roi_class.patches else None

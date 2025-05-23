@@ -2,17 +2,18 @@ from pos_processing import select_best_pos_signal
 from signal_extraction import (
     find_signal_peaks, calculate_hr_hrv, extract_breathing_signal, calculate_breathing_rate_welch
 )
-from debug.debug_plots import (
-    plot_ppg_signal, plot_breathing_signal, plot_rgb_diagnostics,
-    PLOT_PPG, PLOT_BR, PLOT_RGB_DIAG
-)
+# from debug.debug_plots import (
+#     plot_ppg_signal, plot_breathing_signal, plot_rgb_diagnostics,
+#     PLOT_PPG, PLOT_BR, PLOT_RGB_DIAG
+# )
 
 def process_signals(series, enable_signal_debug, br_ax, signal_ax=None, rgb_diag_axs=None):
     best_filt, best_rgb, best_ts, best_fps, quality = select_best_pos_signal(series)
 
-    if enable_signal_debug and best_rgb is not None and rgb_diag_axs is not None and PLOT_RGB_DIAG:
-        plot_rgb_diagnostics(rgb_diag_axs, best_rgb)
-
+    # if enable_signal_debug and best_rgb is not None and rgb_diag_axs is not None and PLOT_RGB_DIAG:
+    #     plot_rgb_diagnostics(rgb_diag_axs, best_rgb)
+    last_hr = last_sdnn = last_rmssd = last_br = None
+    hrv_quality_status = 'N/A'
     if best_filt is not None:
         peaks_tuple = find_signal_peaks(best_filt, best_fps)
         peaks_ts = None
@@ -28,12 +29,12 @@ def process_signals(series, enable_signal_debug, br_ax, signal_ax=None, rgb_diag
             print(f"HR/HRV Results: HR={last_hr}, SDNN={last_sdnn}, RMSSD={last_rmssd}, Quality={hrv_quality_status}")
         else:
             print("Could not calculate HR/HRV from peaks.")
-        if enable_signal_debug and signal_ax is not None and PLOT_PPG:
-            plot_ppg_signal(signal_ax, best_filt, peaks_tuple)
+        # if enable_signal_debug and signal_ax is not None and PLOT_PPG:
+        #     plot_ppg_signal(signal_ax, best_filt, peaks_tuple)
         if best_rgb is not None and best_ts is not None:
             br_signal, br_ts = extract_breathing_signal(best_rgb, best_ts)
-            if enable_signal_debug and br_signal is not None and PLOT_BR:
-                plot_breathing_signal(br_ax, br_signal)
+        #     if enable_signal_debug and br_signal is not None and PLOT_BR:
+        #         plot_breathing_signal(br_ax, br_signal)
             current_br = calculate_breathing_rate_welch(br_signal, br_ts)
             if current_br is not None:
                 last_br = current_br
