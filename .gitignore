@@ -12,3 +12,4 @@ src/ROI/.DS_Store
 src/ROI/.DS_Store
 /src/ui/__pycache__
 src/ui/__pycache__/ui_overlay.cpython-311.pyc
+/src/POS/__pycache__
