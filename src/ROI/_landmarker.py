@@ -1,4 +1,4 @@
-# calc_cords.py
+# landmarker.py
 
 import cv2
 import numpy as np
@@ -25,8 +25,8 @@ class FaceLandmarkerWrapper:
         if result and result.face_landmarks:
             #returning landmarks and mp image(for segmentation, t_matrix for angle)
             t_matrix = result.facial_transformation_matrixes[0].data
-            return result.face_landmarks[0],mp_image,t_matrix
+            return result.face_landmarks[0],t_matrix
 
         else:
-            return None,None,None
+            return None,None
 
