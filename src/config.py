@@ -9,7 +9,7 @@ from mediapipe.tasks.python.vision.face_landmarker import FaceLandmarkerOptions
 
 
 # camera settings
-camera_id = 0 # depends on ur device figure it out
+camera_id = "src/vid.avi" # depends on ur device figure it out
 
 
 # landmark indices for each region
@@ -58,16 +58,16 @@ def get_face_landmarker_options():
 
 # -- pos_processing -- #
 BAND_MIN_HZ = 0.67  # 40 BPM
-BAND_MAX_HZ = 3.33   # 200 BPM
-MIN_SAMPLES_FOR_POS = 340
-MIN_SAMPLES_FOR_QUALITY = 340
+BAND_MAX_HZ = 3.0  # 180 BPM
+MIN_SAMPLES_FOR_POS = 300
+MIN_SAMPLES_FOR_QUALITY = 300
 DEFAULT_TARGET_FPS = 30.0
 
 
 # -- signal_extraction -- #
-MAX_HR_HZ = 3.33  # 200 bpm
-MIN_PEAKS_FOR_HRV = 15
-MIN_VALID_IBI_S = 0.3  # Min IBI in seconds (200 BPM)
+MAX_HR_HZ = 3.0  # 180 bpm
+MIN_PEAKS_FOR_HRV = 12 # Minimum peaks for HRV calculation
+MIN_VALID_IBI_S = 0.333  # Min IBI in seconds (180 BPM)
 MAX_VALID_IBI_S = 1.5  # Max IBI in seconds (40 BPM)
 MAX_ACCEPTABLE_SDNN_MS = 300
 MAX_ACCEPTABLE_RMSSD_MS = 300
@@ -75,4 +75,9 @@ MAX_ACCEPTABLE_RMSSD_MS = 300
 MIN_BR_HZ = 0.1  # 6 breaths per minute
 MAX_BR_HZ = 0.5  # 30 breaths per minute
 MIN_SAMPLES_FOR_BR = 340
+
+
+# Smoothing
+SMOOTHING_WINDOW_SIZE = 5
+
 

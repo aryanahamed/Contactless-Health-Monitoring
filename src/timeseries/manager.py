@@ -30,13 +30,13 @@ class Manager:
 
         # Check if we have enough time span before interpolating
         timestamps = self.series["timestamps"]
-        if len(timestamps) < 2:
+
+        # buffer_duration = timestamps[-1] - timestamps[0]
+        # if buffer_duration < config.window:
+        #     return None  # Wait until we span at least w seconds
+        
+        if len(timestamps) < config.buffer_size: # Use buffer_size from config
             return None
-
-        buffer_duration = timestamps[-1] - timestamps[0]
-        if buffer_duration < config.window:
-            return None  # Wait until we span at least w seconds
-
         # Prepare data for interpolation
         series_np = {k: np.array(list(v)) for k, v in self.series.items()}
         return get_uniform_series(series_np, self.t_uniform_template)

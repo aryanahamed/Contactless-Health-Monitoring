@@ -9,6 +9,20 @@ from config import (
     DEFAULT_TARGET_FPS
 )
 
+def apply_windowing(signal, window_type='hann'):
+    if signal is None or len(signal) == 0:
+        return None
+    
+    if window_type == 'hann':
+        window = scipy.signal.windows.hann(len(signal))
+    elif window_type == 'hamming':
+        window = scipy.signal.windows.hamming(len(signal))
+    else:
+        return signal
+    
+    return signal * window
+
+
 def handle_nan_values(rgb_data, timestamps):
     if rgb_data is None or timestamps is None or rgb_data.shape[0] != timestamps.shape[0]:
         return None, None
@@ -37,7 +51,7 @@ def _compute_pos_core(normalized_rgb):
         return None
     
     alpha = std_X / std_Y
-    S = X - alpha * Y
+    S = X + alpha * Y
     return S
 
 
@@ -49,15 +63,23 @@ def apply_pos_projection(rgb_buffer):
     if np.any(mean_rgb <= 1e-10):
         return None
     
+    if np.any(np.std(rgb_buffer, axis=0) < 1e-6):
+        return None
+    
     normalized_rgb = rgb_buffer / mean_rgb
+    raw_pos_signal = _compute_pos_core(normalized_rgb)
     
-    scipy.signal.detrend(normalized_rgb, axis=0, overwrite_data=True)
-    
-    return _compute_pos_core(normalized_rgb)
+    detrended_pos_signal = scipy.signal.detrend(raw_pos_signal, axis=0, overwrite_data=True)
+
+    if detrended_pos_signal is not None and np.std(detrended_pos_signal) < 1e-8:
+        return None
+
+    return detrended_pos_signal
+
 
 
 _FILTER_CACHE = {}
-def _get_butterworth_coeffs(low_cut_hz, high_cut_hz, fps, order=5):
+def _get_butterworth_coeffs(low_cut_hz, high_cut_hz, fps, order=3):
     key = (low_cut_hz, high_cut_hz, fps, order)
     if key not in _FILTER_CACHE:
         nyquist = 0.5 * fps
@@ -70,7 +92,7 @@ def _get_butterworth_coeffs(low_cut_hz, high_cut_hz, fps, order=5):
     return _FILTER_CACHE[key]
 
 
-def apply_butterworth_bandpass(signal_buffer, low_cut_hz, high_cut_hz, fps, order=5):
+def apply_butterworth_bandpass(signal_buffer, low_cut_hz, high_cut_hz, fps, order=3):
     if signal_buffer is None or fps <= 0 or len(signal_buffer) <= order * 3:
         return None
     
@@ -80,25 +102,6 @@ def apply_butterworth_bandpass(signal_buffer, low_cut_hz, high_cut_hz, fps, orde
     
     b, a = coeffs
     return scipy.signal.filtfilt(b, a, signal_buffer)
-
-
-def apply_butterworth_bandpass(signal_buffer, low_cut_hz, high_cut_hz, fps, order=5):
-    if signal_buffer is None or fps <= 0:
-        return None
-    if len(signal_buffer) <= order * 3:
-        return None
-    nyquist = 0.5 * fps
-    low = low_cut_hz / nyquist
-    high = high_cut_hz / nyquist
-    if low <= 0:
-        low = 0.01
-    if high >= 1:
-        high = 0.99
-    if low >= high:
-        return None
-    b, a = scipy.signal.butter(order, [low, high], btype='band')
-    filtered_signal = scipy.signal.filtfilt(b, a, signal_buffer)
-    return filtered_signal
 
 
 @njit(cache=True)
@@ -126,12 +129,12 @@ def calculate_signal_quality(filtered_signal, fps):
         return 0.0
     
     try:
-        nperseg = min(256, len(filtered_signal) // 4 * 4)
+        nperseg = max(32, min(256, len(filtered_signal) // 4 * 4))
         if nperseg < 32:
             nperseg = min(32, len(filtered_signal))
         
         freqs, power_spectrum = scipy.signal.welch(
-            filtered_signal, fs=fps, nperseg=nperseg
+        filtered_signal, fs=fps, nperseg=nperseg
         )
         
         signal_power, noise_power = _compute_power_sums(
@@ -143,12 +146,12 @@ def calculate_signal_quality(filtered_signal, fps):
         
         epsilon = 1e-10
         snr_raw = signal_power / (noise_power + epsilon)
-        capped_snr = min(snr_raw, 10.0)
+        capped_snr = min(snr_raw, 15.0)
         
         signal_variance = np.var(filtered_signal)
-        variance_factor = min(signal_variance * 1000, 1.0)
+        variance_factor = min(signal_variance * 100, 1.0)
         
-        quality_score = min(10.0, (0.8 * capped_snr + 0.2 * variance_factor * 10.0))
+        quality_score = min(10.0, (0.7 * capped_snr + 0.3 * variance_factor * 10.0))
         
         return quality_score
         
@@ -180,19 +183,21 @@ def select_best_pos_signal(input_data):
         if cleaned_rgb is None:
             continue
         
-        pos_signal = apply_pos_projection(cleaned_rgb)
-        if pos_signal is None:
-            continue
-        
         if len(cleaned_timestamps) > 1:
             duration = cleaned_timestamps[-1] - cleaned_timestamps[0]
             fps = (len(cleaned_timestamps) - 1) / duration if duration > 0 else DEFAULT_TARGET_FPS
         else:
             fps = DEFAULT_TARGET_FPS
+        pos_signal = apply_pos_projection(cleaned_rgb)
         
-        filtered_pos = apply_butterworth_bandpass(pos_signal, BAND_MIN_HZ, BAND_MAX_HZ, fps)
+        if pos_signal is None:
+            continue
+        
+        filtered_pos = apply_butterworth_bandpass(pos_signal, BAND_MIN_HZ, BAND_MAX_HZ, fps, order=3)
         if filtered_pos is None:
             continue
+        
+        filtered_pos = apply_windowing(filtered_pos, window_type='hann')
         
         quality_score = calculate_signal_quality(filtered_pos, fps)
         

@@ -11,6 +11,7 @@ import pstats
 from collections import deque
 import io
 from POS import signal_pipeline
+import heartpy as hp
 
 fps_window = deque(maxlen=30)  # last 30 timestamps
 
@@ -20,10 +21,11 @@ def main():
     capture = CaptureThread()
     capture.start()
     #collector = LongTermCollector()
-    wait_for_startup(capture, delay_sec=3)
+    # wait_for_startup(capture, delay_sec=3)
     frame_count = 0
     last_hr = None
-    list_hr = []
+    # for comparison with ground truth
+    # hr_data = []
     try:
         while True:
             frame, timestamp = capture.get_frame()
@@ -44,21 +46,34 @@ def main():
                                    roi_class.valid_rois, roi_class.thetas[0], fps_actual)
             cv2.imshow('ROI', vis_frame)
             if roi_class.patches:
-                series= series_generator.get_series(roi_class.patches, timestamp)
+                series = series_generator.get_series(roi_class.patches, timestamp)
                 if series:
                     last_hr, last_sdnn, last_rmssd, quality, hrv_quality_status = signal_pipeline.process_hr(series)
+
+
+                    # Heatpy implementation
+                    # forehead = series["forehead"][:, 1]
+                    # filtered_signal = hp.filter_signal(forehead, cutoff=[0.67, 3.0], sample_rate=30, order=3, filtertype='bandpass')
+                    # working_data, measures = hp.process(filtered_signal, 30.0)
+                    # print("Heart rate(HeartPy):", measures['bpm'])
+                    # hr_data.append((timestamp, measures['bpm']))
+
+
                     #collector.append(u, series)
                     #raw_all, uniform_all = collector.get_combined_series()
                     #if len(raw_all.get("forehead", [])) >= 1000:
                         #plot_interpolation_comparison(uniform_all, raw_all, region="forehead")
                         #break
+                    
                     if last_hr is not None:
-                        list_hr.append(last_hr)
-                        # Average of last 30 HR values
-                        if len(list_hr) >= 30:
-                            avg_last_30 = sum(list_hr[-30:]) / 30
-                            print(f"Last 30 HR average: {avg_last_30:.2f}")
-                    # print(f"HR: {last_hr}")
+                        print(f"HR: {round(last_hr)}")
+                        # hr_data.append((timestamp, last_hr))
+                    # if last_sdnn is not None:
+                    #     print(f"SDNN: {round(last_sdnn, 2)} ms")
+                    # if last_rmssd is not None:
+                    #     print(f"RMSSD: {round(last_rmssd, 2)} ms")
+                    # print(f"HRV Quality: {hrv_quality_status} (Quality Score: {quality})")
+
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
             frame_count += 1
@@ -69,6 +84,15 @@ def main():
     finally:
         capture.stop()
         cv2.destroyAllWindows()
+        
+        # Save HR data to file for comparison
+        # if hr_data:
+        #     print(f"Saving {len(hr_data)} HR measurements to hr_data.txt")
+        #     with open("src/hr_data.txt", "w") as f:
+        #         f.write("timestamp,hr\n")
+        #         for ts, hr in hr_data:
+        #             f.write(f"{ts:.3f},{hr:.2f}\n")
+        #     print("HR data saved successfully!")
 
 
 

@@ -13,3 +13,14 @@ src/ROI/.DS_Store
 /src/ui/__pycache__
 src/ui/__pycache__/ui_overlay.cpython-311.pyc
 /src/POS/__pycache__
+/.idea
+src/gtdump.txt
+src/gtdump_review.txt
+src/hr_comparison.py
+/src/hr_comparison
+src/hr_data.txt
+src/POS/hr_comparison_plot.png
+src/smoothed_hr_data.txt
+src/vid.avi
+src/vid_review.avi
+src/hr_comparison_plot.png
