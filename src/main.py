@@ -14,6 +14,7 @@ from POS import signal_pipeline
 import heartpy as hp
 
 fps_window = deque(maxlen=30)  # last 30 timestamps
+DETECTION_INTERVAL = 2  # every 2 frames
 
 def main():
     roi_class = Extract()
@@ -25,7 +26,7 @@ def main():
     frame_count = 0
     last_hr = None
     # for comparison with ground truth
-    # hr_data = []
+    hr_data = []
     try:
         while True:
             frame, timestamp = capture.get_frame()
@@ -35,13 +36,14 @@ def main():
                 time.sleep(0.01)
                 continue
             fps_window.append(timestamp)
+
             if len(fps_window) >= 2:
                 duration = fps_window[-1] - fps_window[0]
                 fps_actual = (len(fps_window) - 1) / duration if duration > 0 else 0
             else:
                 fps_actual = 0.0
-
-            roi_class.process_frame(frame, timestamp)
+            if frame_count % DETECTION_INTERVAL == 0:
+                roi_class.process_frame(frame, timestamp)
             vis_frame = draw_hulls(frame, roi_class.hulls,roi_class.region_cords,
                                    roi_class.valid_rois, roi_class.thetas[0], fps_actual)
             cv2.imshow('ROI', vis_frame)
@@ -51,7 +53,7 @@ def main():
                     last_hr, last_sdnn, last_rmssd, quality, hrv_quality_status = signal_pipeline.process_hr(series)
 
 
-                    # Heatpy implementation
+                    # # Heartpy implementation
                     # forehead = series["forehead"][:, 1]
                     # filtered_signal = hp.filter_signal(forehead, cutoff=[0.67, 3.0], sample_rate=30, order=3, filtertype='bandpass')
                     # working_data, measures = hp.process(filtered_signal, 30.0)
@@ -67,7 +69,7 @@ def main():
                     
                     if last_hr is not None:
                         print(f"HR: {round(last_hr)}")
-                        # hr_data.append((timestamp, last_hr))
+                        hr_data.append((timestamp, last_hr))
                     # if last_sdnn is not None:
                     #     print(f"SDNN: {round(last_sdnn, 2)} ms")
                     # if last_rmssd is not None:
@@ -85,7 +87,7 @@ def main():
         capture.stop()
         cv2.destroyAllWindows()
         
-        # Save HR data to file for comparison
+        # # Save HR data
         # if hr_data:
         #     print(f"Saving {len(hr_data)} HR measurements to hr_data.txt")
         #     with open("src/hr_data.txt", "w") as f:
@@ -93,6 +95,19 @@ def main():
         #         for ts, hr in hr_data:
         #             f.write(f"{ts:.3f},{hr:.2f}\n")
         #     print("HR data saved successfully!")
+
+        # # Plot full HR data
+        # if hr_data:
+        #     timestamps, hr_values = zip(*hr_data)
+        #     import matplotlib.pyplot as plt
+        #     plt.figure(figsize=(12, 6))
+        #     plt.plot(timestamps, hr_values, label='Heart Rate (BPM)', color='blue')
+        #     plt.xlabel('Timestamp (s)')
+        #     plt.ylabel('Heart Rate (BPM)')
+        #     plt.title('Heart Rate Over Time')
+        #     plt.legend()
+        #     plt.grid()
+        #     plt.show()
 
 
 
@@ -110,4 +125,5 @@ def profile_block(name, func, *args, **kwargs):
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    profile_block("Main Function", main)

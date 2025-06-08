@@ -10,6 +10,7 @@ from mediapipe.tasks.python.vision.face_landmarker import FaceLandmarkerOptions
 
 # camera settings
 camera_id = "src/vid.avi" # depends on ur device figure it out
+# camera_id = 0  # default camera ID for webcam
 
 
 # landmark indices for each region

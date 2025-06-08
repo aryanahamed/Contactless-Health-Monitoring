@@ -12,12 +12,12 @@ def process_hr(series):
     
     if best_filt is not None:        
         fft_hr_estimate = estimate_hr_fft(best_filt, best_fps)
-        peaks_tuple = find_signal_peaks(best_filt, best_fps, fft_hr_estimate)
+        # peaks_tuple = find_signal_peaks(best_filt, best_fps, fft_hr_estimate)
 
-        peaks_ts = None
-        if peaks_tuple:
-            peaks_indices = peaks_tuple[0]
-            peaks_ts = best_ts[peaks_indices] if best_ts is not None else None
+        # peaks_ts = None
+        # if peaks_tuple:
+        #     peaks_indices = peaks_tuple[0]
+        #     peaks_ts = best_ts[peaks_indices] if best_ts is not None else None
             
         # hr_hrv_results = calculate_hr_hrv(peaks_ts)
         # if hr_hrv_results:
@@ -25,7 +25,7 @@ def process_hr(series):
         #     last_sdnn = hr_hrv_results.get('sdnn')
         #     last_rmssd = hr_hrv_results.get('rmssd')
         #     hrv_quality_status = hr_hrv_results.get('hrv_quality', 'N/A')
-            # print(f"Peak-based HR: {raw_hr:.1f} BPM, HRV Quality: {hrv_quality_status}")
+        #     print(f"Peak-based HR: {raw_hr:.1f} BPM, HRV Quality: {hrv_quality_status}")
         # else:
         #     print("Could not calculate HR/HRV from peaks.")
         #     if fft_hr_estimate is not None:

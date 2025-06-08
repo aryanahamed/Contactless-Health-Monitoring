@@ -122,13 +122,13 @@ def _calculate_hr_hrv_core(ibis_sec_final):
     sdnn_ms = np.std(ibis_sec_final) * 1000.0
     if ibis_sec_final.size >= 2:
         diffs_ibi = np.diff(ibis_sec_final)
-        np.square(diffs_ibi, out=diffs_ibi)
+        diffs_ibi = np.square(diffs_ibi)
         rmssd_ms = np.sqrt(np.mean(diffs_ibi)) * 1000.0
     else:
         rmssd_ms = np.nan
     return mean_ibi_sec, hr_bpm, sdnn_ms, rmssd_ms
 
-def calculate_hr_hrv(peak_timestamps: np.ndarray):
+def calculate_hr_hrv(peak_timestamps):
     if peak_timestamps is None or peak_timestamps.size < MIN_PEAKS_FOR_HRV:
         return None
 

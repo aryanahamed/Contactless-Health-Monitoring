@@ -24,3 +24,6 @@ src/smoothed_hr_data.txt
 src/vid.avi
 src/vid_review.avi
 src/hr_comparison_plot.png
+/__pycache__
+presentation_plots.py
+presentation_plots_fixed.png

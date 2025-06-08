@@ -172,23 +172,28 @@ def update(current, prev):
     return ema(curr, prev,base_alpha=.1,m=3,b=2).item()
 
 
+# def is_skin(roi, threshold=0.2):
+#     if roi is None or roi.size == 0:
+#         return False
+
+#     # Convert to YCrCb color space
+#     ycrcb = cv2.cvtColor(roi, cv2.COLOR_BGR2YCrCb)
+
+#     # Skin color bounds (based on empirical research)
+#     lower = np.array([0, 133, 77], dtype=np.uint8)
+#     upper = np.array([255, 173, 127], dtype=np.uint8)
+
+#     # Skin mask and skin pixel ratio
+#     mask = cv2.inRange(ycrcb, lower, upper)
+
+#     # Return True if skin dominates the patch
+#     return np.count_nonzero(mask) / mask.size >= threshold
+
+
 def is_skin(roi, threshold=0.5):
     if roi is None or roi.size == 0:
         return False
-
-    # Convert to YCrCb color space
-    ycrcb = cv2.cvtColor(roi, cv2.COLOR_BGR2YCrCb)
-
-    # Skin color bounds (based on empirical research)
-    lower = np.array([0, 133, 77], dtype=np.uint8)
-    upper = np.array([255, 173, 127], dtype=np.uint8)
-
-    # Skin mask and skin pixel ratio
-    mask = cv2.inRange(ycrcb, lower, upper)
-
-    # Return True if skin dominates the patch
-    return np.count_nonzero(mask) / mask.size >= threshold
-
+    return True
 
 
 def _should_update_roi(region, center, current_theta, yaw_thresh=3, pitch_thresh=3, roll_thresh=4, center_thresh=3):
