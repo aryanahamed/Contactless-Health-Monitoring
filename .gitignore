@@ -27,3 +27,6 @@ src/hr_comparison_plot.png
 /__pycache__
 presentation_plots.py
 presentation_plots_fixed.png
+/src/BR/__pycache__
+/src/BR/br_test
+/plots/br_accuracy_debug

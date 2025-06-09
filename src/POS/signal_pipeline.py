@@ -1,6 +1,6 @@
 from POS.pos_processing import select_best_pos_signal, apply_windowing
 from POS.signal_extraction import (
-    estimate_hr_fft, find_signal_peaks, calculate_hr_hrv, extract_breathing_signal, calculate_breathing_rate_welch
+    estimate_hr_fft, find_signal_peaks, calculate_hr_hrv
 )
 from POS.smoothing import smooth_bpm_multi_stage, get_current_smoothed_bpm
 
@@ -39,17 +39,3 @@ def process_hr(series):
         smoothed_hr = get_current_smoothed_bpm()
     
     return smoothed_hr, last_sdnn, last_rmssd, quality, hrv_quality_status
-
-
-def process_breathing(series):
-    _, best_rgb, best_ts, _, _ = select_best_pos_signal(series)
-    last_br = None
-    if best_rgb is not None and best_ts is not None:
-        br_signal, br_ts = extract_breathing_signal(best_rgb, best_ts)
-        current_br = calculate_breathing_rate_welch(br_signal, br_ts)
-        if current_br is not None:
-            last_br = current_br
-            print(f"BR Result (updated): {last_br:.1f} BPM")
-        else:
-            print("Could not calculate BR in this interval.")
-    return last_br

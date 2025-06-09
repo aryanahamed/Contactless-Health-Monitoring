@@ -9,15 +9,9 @@ from config import (
     MAX_VALID_IBI_S,
     MAX_ACCEPTABLE_SDNN_MS,
     MAX_ACCEPTABLE_RMSSD_MS,
-    MIN_BR_HZ,
-    MAX_BR_HZ,
-    MIN_SAMPLES_FOR_BR,
     BAND_MIN_HZ,
     BAND_MAX_HZ,
 )
-
-from POS.pos_processing import apply_butterworth_bandpass
-from POS.pos_processing import handle_nan_values
 
 MIN_MAD_S = 0.005
 K_MAD_MULTIPLIER = 2.5
@@ -169,46 +163,3 @@ def calculate_hr_hrv(peak_timestamps):
 
     return {'hr': hr_bpm, 'sdnn': sdnn_ms, 'rmssd': rmssd_ms, 'hrv_quality': 'ok'}
 
-def extract_breathing_signal(rgb_buffer, timestamps):
-    cleaned_rgb, cleaned_timestamps = handle_nan_values(rgb_buffer, timestamps)
-    if cleaned_rgb is None or cleaned_timestamps is None:
-        return None, None
-    if cleaned_rgb.shape[0] < MIN_SAMPLES_FOR_BR:
-        return None, None
-    approx_fps = 1.0 / np.mean(np.diff(cleaned_timestamps))
-    green_signal = cleaned_rgb[:, 1]
-    detrended_green = scipy.signal.detrend(green_signal, type='linear')
-    filtered_breathing_signal = apply_butterworth_bandpass(
-        detrended_green, MIN_BR_HZ, MAX_BR_HZ, approx_fps, order=3
-    )
-    if filtered_breathing_signal is None:
-        return None, None
-    mean_green = np.mean(filtered_breathing_signal)
-    std_green = np.std(filtered_breathing_signal)
-    if std_green == 0:
-        return None, None
-    detrended_normalized_green = (filtered_breathing_signal - mean_green) / std_green
-    return detrended_normalized_green, cleaned_timestamps
-
-def calculate_breathing_rate_welch(breathing_signal, timestamps):
-    if breathing_signal is None or timestamps is None or len(breathing_signal) < 2:
-        return None
-    dt = np.diff(timestamps)
-    if np.any(dt <= 0):
-        return None
-    fs = 1.0 / np.median(dt)
-    signal = breathing_signal - np.mean(breathing_signal)
-    nperseg = len(signal)
-    nfft = 4096
-    freqs, psd = scipy.signal.welch(signal, fs=fs, nperseg=nperseg, nfft=nfft)
-    valid_mask = (freqs >= MIN_BR_HZ) & (freqs <= MAX_BR_HZ)
-    if not np.any(valid_mask):
-        return None
-    valid_freqs = freqs[valid_mask]
-    valid_psd = psd[valid_mask]
-    if len(valid_psd) == 0:
-        return None
-    peak_idx = np.argmax(valid_psd)
-    dominant_freq_hz = valid_freqs[peak_idx]
-    breathing_rate_bpm = dominant_freq_hz * 60.0
-    return breathing_rate_bpm

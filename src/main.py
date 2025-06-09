@@ -11,6 +11,7 @@ import pstats
 from collections import deque
 import io
 from POS import signal_pipeline
+from BR import breathing_pipeline
 import heartpy as hp
 
 fps_window = deque(maxlen=30)  # last 30 timestamps
@@ -27,6 +28,7 @@ def main():
     last_hr = None
     # for comparison with ground truth
     hr_data = []
+    br_data = []
     try:
         while True:
             frame, timestamp = capture.get_frame()
@@ -51,7 +53,7 @@ def main():
                 series = series_generator.get_series(roi_class.patches, timestamp)
                 if series:
                     last_hr, last_sdnn, last_rmssd, quality, hrv_quality_status = signal_pipeline.process_hr(series)
-
+                    last_br = breathing_pipeline.process_breathing(series)
 
                     # # Heartpy implementation
                     # forehead = series["forehead"][:, 1]
@@ -70,6 +72,9 @@ def main():
                     if last_hr is not None:
                         print(f"HR: {round(last_hr)}")
                         hr_data.append((timestamp, last_hr))
+                    if last_br is not None:
+                        print(f"Breathing Rate: {round(last_br)}")
+                        br_data.append((timestamp, last_br))
                     # if last_sdnn is not None:
                     #     print(f"SDNN: {round(last_sdnn, 2)} ms")
                     # if last_rmssd is not None:
@@ -95,20 +100,6 @@ def main():
         #         for ts, hr in hr_data:
         #             f.write(f"{ts:.3f},{hr:.2f}\n")
         #     print("HR data saved successfully!")
-
-        # # Plot full HR data
-        # if hr_data:
-        #     timestamps, hr_values = zip(*hr_data)
-        #     import matplotlib.pyplot as plt
-        #     plt.figure(figsize=(12, 6))
-        #     plt.plot(timestamps, hr_values, label='Heart Rate (BPM)', color='blue')
-        #     plt.xlabel('Timestamp (s)')
-        #     plt.ylabel('Heart Rate (BPM)')
-        #     plt.title('Heart Rate Over Time')
-        #     plt.legend()
-        #     plt.grid()
-        #     plt.show()
-
 
 
 def profile_block(name, func, *args, **kwargs):
