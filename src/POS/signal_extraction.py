@@ -30,7 +30,7 @@ def _quadratic_interpolation(y_values, peak_index):
     return float(peak_index) + p
 
 
-def estimate_hr_fft(filtered_signal, fps):
+def calculate_hr_fft(filtered_signal, fps):
     if filtered_signal is None or len(filtered_signal) < 128:
         return None
         
@@ -110,9 +110,8 @@ def find_signal_peaks(filtered_signal, target_fps, expected_hr_bpm=None):
     return peaks_data
 
 @njit(cache=True)
-def _calculate_hr_hrv_core(ibis_sec_final):
+def _calculate_hrv_core(ibis_sec_final):
     mean_ibi_sec = np.mean(ibis_sec_final)
-    hr_bpm = 60.0 / mean_ibi_sec if mean_ibi_sec != 0 else np.nan
     sdnn_ms = np.std(ibis_sec_final) * 1000.0
     if ibis_sec_final.size >= 2:
         diffs_ibi = np.diff(ibis_sec_final)
@@ -120,9 +119,9 @@ def _calculate_hr_hrv_core(ibis_sec_final):
         rmssd_ms = np.sqrt(np.mean(diffs_ibi)) * 1000.0
     else:
         rmssd_ms = np.nan
-    return mean_ibi_sec, hr_bpm, sdnn_ms, rmssd_ms
+    return mean_ibi_sec, sdnn_ms, rmssd_ms
 
-def calculate_hr_hrv(peak_timestamps):
+def calculate_hrv(peak_timestamps):
     if peak_timestamps is None or peak_timestamps.size < MIN_PEAKS_FOR_HRV:
         return None
 
@@ -150,16 +149,16 @@ def calculate_hr_hrv(peak_timestamps):
     if ibis_sec_final.size < MIN_PEAKS_FOR_HRV - 1:
         return None
 
-    mean_ibi_sec, hr_bpm, sdnn_ms, rmssd_ms = _calculate_hr_hrv_core(ibis_sec_final)
+    mean_ibi_sec, sdnn_ms, rmssd_ms = _calculate_hrv_core(ibis_sec_final)
 
     if mean_ibi_sec == 0:
-        return {'hr': np.nan, 'sdnn': np.nan, 'rmssd': np.nan, 'hrv_quality': 'error_zero_mean_ibi'}
+        return {'sdnn': np.nan, 'rmssd': np.nan, 'hrv_quality': 'error_zero_mean_ibi'}
 
     if sdnn_ms > MAX_ACCEPTABLE_SDNN_MS:
-        return {'hr': hr_bpm, 'sdnn': np.nan, 'rmssd': np.nan, 'hrv_quality': 'unstable_sdnn'}
+        return {'sdnn': np.nan, 'rmssd': np.nan, 'hrv_quality': 'unstable_sdnn'}
 
     if not np.isnan(rmssd_ms) and rmssd_ms > MAX_ACCEPTABLE_RMSSD_MS:
-        return {'hr': hr_bpm, 'sdnn': sdnn_ms, 'rmssd': np.nan, 'hrv_quality': 'unstable_rmssd'}
+        return {'sdnn': sdnn_ms, 'rmssd': np.nan, 'hrv_quality': 'unstable_rmssd'}
 
-    return {'hr': hr_bpm, 'sdnn': sdnn_ms, 'rmssd': rmssd_ms, 'hrv_quality': 'ok'}
+    return {'sdnn': sdnn_ms, 'rmssd': rmssd_ms, 'hrv_quality': 'ok'}
 

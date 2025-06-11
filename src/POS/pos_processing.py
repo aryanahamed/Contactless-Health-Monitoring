@@ -127,37 +127,42 @@ def _compute_power_sums(power_spectrum, freqs, band_min, band_max):
 def calculate_signal_quality(filtered_signal, fps):
     if filtered_signal is None or len(filtered_signal) < MIN_SAMPLES_FOR_QUALITY or fps <= 0:
         return 0.0
-    
+
     try:
-        nperseg = max(32, min(256, len(filtered_signal) // 4 * 4))
-        if nperseg < 32:
-            nperseg = min(32, len(filtered_signal))
-        
-        freqs, power_spectrum = scipy.signal.welch(
-        filtered_signal, fs=fps, nperseg=nperseg
-        )
-        
-        signal_power, noise_power = _compute_power_sums(
-            power_spectrum, freqs, BAND_MIN_HZ, BAND_MAX_HZ
-        )
-        
-        if signal_power == 0:
+        nperseg = min(len(filtered_signal), 256)
+        nfft = 4096
+        freqs, psd = scipy.signal.welch(filtered_signal, fs=fps, nperseg=nperseg, nfft=nfft)
+
+        hr_band_mask = (freqs >= BAND_MIN_HZ) & (freqs <= BAND_MAX_HZ)
+        if not np.any(hr_band_mask):
             return 0.0
+            
+        freqs_hr = freqs[hr_band_mask]
+        psd_hr = psd[hr_band_mask]
+
+        if np.sum(psd_hr) < 1e-10:
+            return 0.0
+
+        peak_idx = np.argmax(psd_hr)
+        f_peak = freqs_hr[peak_idx]
+
+        signal_window_hz = 0.2
+        signal_mask = (freqs_hr >= f_peak - signal_window_hz) & (freqs_hr <= f_peak + signal_window_hz)
         
+        signal_power = np.sum(psd_hr[signal_mask])
+
+        total_power_in_band = np.sum(psd_hr)
+        noise_power = total_power_in_band - signal_power
+
         epsilon = 1e-10
-        snr_raw = signal_power / (noise_power + epsilon)
-        capped_snr = min(snr_raw, 15.0)
+        snr = signal_power / (noise_power + epsilon)
         
-        signal_variance = np.var(filtered_signal)
-        variance_factor = min(signal_variance * 100, 1.0)
+        quality_score = np.log1p(snr) * 2.0
         
-        quality_score = min(10.0, (0.7 * capped_snr + 0.3 * variance_factor * 10.0))
-        
-        return quality_score
-        
+        return min(quality_score, 10.0)
+
     except Exception:
         return 0.0
-
 
 def select_best_pos_signal(input_data):
     timestamps_np = np.asarray(input_data["timestamps"], dtype=np.float64)
@@ -198,7 +203,6 @@ def select_best_pos_signal(input_data):
             continue
         
         filtered_pos = apply_windowing(filtered_pos, window_type='hann')
-        
         quality_score = calculate_signal_quality(filtered_pos, fps)
         
         if quality_score > highest_quality:

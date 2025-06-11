@@ -12,7 +12,10 @@ from collections import deque
 import io
 from POS import signal_pipeline
 from BR import breathing_pipeline
+from STRESS import stress_detection
 import heartpy as hp
+import pandas as pd
+import matplotlib.pyplot as plt
 
 fps_window = deque(maxlen=30)  # last 30 timestamps
 DETECTION_INTERVAL = 2  # every 2 frames
@@ -26,9 +29,13 @@ def main():
     # wait_for_startup(capture, delay_sec=3)
     frame_count = 0
     last_hr = None
-    # for comparison with ground truth
     hr_data = []
     br_data = []
+    sdnn_data = []
+    rmssd_data = []
+    
+    rf_model_loaded, scaler_loaded, label_encoder_loaded = stress_detection.load_stress_model_assets()
+
     try:
         while True:
             frame, timestamp = capture.get_frame()
@@ -75,11 +82,24 @@ def main():
                     if last_br is not None:
                         print(f"Breathing Rate: {round(last_br)}")
                         br_data.append((timestamp, last_br))
-                    # if last_sdnn is not None:
-                    #     print(f"SDNN: {round(last_sdnn, 2)} ms")
-                    # if last_rmssd is not None:
-                    #     print(f"RMSSD: {round(last_rmssd, 2)} ms")
-                    # print(f"HRV Quality: {hrv_quality_status} (Quality Score: {quality})")
+                    if last_sdnn is not None:
+                        print(f"SDNN: {round(last_sdnn, 2)} ms")
+                        sdnn_data.append((timestamp, last_sdnn))
+                    if last_rmssd is not None:
+                        print(f"RMSSD: {round(last_rmssd, 2)} ms")
+                        rmssd_data.append((timestamp, last_rmssd))
+                        print(f"HRV Quality: {hrv_quality_status}")
+                    if quality is not None:
+                        print(f"Quality Score: {quality:.2f}")
+                
+                if rf_model_loaded and scaler_loaded and label_encoder_loaded:
+                    if last_hr is not None and last_sdnn is not None and last_rmssd is not None:
+                        predicted_stress, _ = stress_detection.predict_stress(
+                            last_hr, last_sdnn, last_rmssd,
+                            rf_model_loaded, scaler_loaded, label_encoder_loaded
+                        )
+                        if predicted_stress:
+                            print(f"Stress Intensity: {predicted_stress}")
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -91,16 +111,25 @@ def main():
     finally:
         capture.stop()
         cv2.destroyAllWindows()
-        
-        # # Save HR data
-        # if hr_data:
-        #     print(f"Saving {len(hr_data)} HR measurements to hr_data.txt")
-        #     with open("src/hr_data.txt", "w") as f:
-        #         f.write("timestamp,hr\n")
-        #         for ts, hr in hr_data:
-        #             f.write(f"{ts:.3f},{hr:.2f}\n")
-        #     print("HR data saved successfully!")
 
+        # Save HR data
+        if hr_data:
+            print(f"Saving {len(hr_data)} HR measurements to hr_data.txt")
+            with open("src/hr_data.txt", "w") as f:
+                f.write("timestamp,hr\n")
+                for ts, hr in hr_data:
+                    f.write(f"{ts:.3f},{hr:.2f}\n")
+            print("HR data saved successfully!")
+            
+        # Save BR data
+        if br_data:
+            print(f"Saving {len(br_data)} Breathing Rate measurements to br_data.txt")
+            with open("src/br_data.txt", "w") as f:
+                f.write("timestamp,breathing_rate\n")
+                for ts, br in br_data:
+                    f.write(f"{ts:.3f},{br:.2f}\n")
+            print("Breathing Rate data saved successfully!")
+        
 
 def profile_block(name, func, *args, **kwargs):
     profiler = cProfile.Profile()

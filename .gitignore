@@ -30,3 +30,8 @@ presentation_plots_fixed.png
 /src/BR/__pycache__
 /src/BR/br_test
 /plots/br_accuracy_debug
+src/br_data.txt
+/src/STRESS/__pycache__
+src/sdnn_rmssd_plot.png
+src/reference_breathing_rates-after-exercise.csv
+src/br_comparison_plot.png

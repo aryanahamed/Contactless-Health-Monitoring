@@ -4,8 +4,7 @@ from BR.br_extraction import extract_breathing_signal, calculate_breathing_rate_
 from BR.smoothing_br import smooth_br_multi_stage
 
 def process_breathing(series):
-    _, best_rgb, best_ts, _, quality = select_best_pos_signal(series)
-    
+    _, best_rgb, best_ts, _, quality = select_best_pos_signal(series)  
     last_br = None
     if best_rgb is not None and best_ts is not None and len(best_ts) > 1:
         fs = 1.0 / np.median(np.diff(best_ts))
