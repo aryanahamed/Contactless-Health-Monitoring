@@ -1,6 +1,3 @@
-# main.py
-import numpy as np
-import cv2
 import time
 from capture_thread import CaptureThread,wait_for_startup
 from ROI.extract_roi import (Extract)
@@ -14,13 +11,12 @@ from POS import signal_pipeline
 from BR import breathing_pipeline
 from STRESS import stress_detection
 import heartpy as hp
-import pandas as pd
-import matplotlib.pyplot as plt
+from PyQt6.QtWidgets import QApplication
+from UI.pyqt_ui import AppWindow
+import sys
 
-fps_window = deque(maxlen=30)  # last 30 timestamps
-DETECTION_INTERVAL = 2  # every 2 frames
 
-def main():
+def main_logic(emit_frame, emit_metrics, should_stop):
     roi_class = Extract()
     series_generator =  Manager()
     capture = CaptureThread()
@@ -28,6 +24,8 @@ def main():
     #collector = LongTermCollector()
     # wait_for_startup(capture, delay_sec=3)
     frame_count = 0
+    fps_window = deque(maxlen=30)  # last 30 timestamps
+    DETECTION_INTERVAL = 2  # every 2 frames
     last_hr = None
     hr_data = []
     br_data = []
@@ -37,10 +35,11 @@ def main():
     rf_model_loaded, scaler_loaded, label_encoder_loaded = stress_detection.load_stress_model_assets()
 
     try:
-        while True:
+        while not should_stop():
             frame, timestamp = capture.get_frame()
+            print(f"Frame: {frame_count}, Timestamp: {timestamp:.3f}")
             if frame is None:
-                if not capture.running.is_set():
+                if not capture.running.is_set() and not should_stop():
                     break
                 time.sleep(0.01)
                 continue
@@ -55,7 +54,7 @@ def main():
                 roi_class.process_frame(frame, timestamp)
             vis_frame = draw_hulls(frame, roi_class.hulls,roi_class.region_cords,
                                    roi_class.valid_rois, roi_class.thetas[0], fps_actual)
-            cv2.imshow('ROI', vis_frame)
+            emit_frame(vis_frame)
             if roi_class.patches:
                 series = series_generator.get_series(roi_class.patches, timestamp)
                 if series:
@@ -76,41 +75,44 @@ def main():
                         #plot_interpolation_comparison(uniform_all, raw_all, region="forehead")
                         #break
                     
-                    if last_hr is not None:
-                        print(f"HR: {round(last_hr)}")
-                        hr_data.append((timestamp, last_hr))
-                    if last_br is not None:
-                        print(f"Breathing Rate: {round(last_br)}")
-                        br_data.append((timestamp, last_br))
-                    if last_sdnn is not None:
-                        print(f"SDNN: {round(last_sdnn, 2)} ms")
-                        sdnn_data.append((timestamp, last_sdnn))
-                    if last_rmssd is not None:
-                        print(f"RMSSD: {round(last_rmssd, 2)} ms")
-                        rmssd_data.append((timestamp, last_rmssd))
-                        print(f"HRV Quality: {hrv_quality_status}")
+                    if last_hr is not None: hr_data.append((timestamp, last_hr))
+                    if last_br is not None: br_data.append((timestamp, last_br))
+                    if last_sdnn is not None: sdnn_data.append((timestamp, last_sdnn))
+                    if last_rmssd is not None: rmssd_data.append((timestamp, last_rmssd))
+                    
+                    print(f"HRV Quality: {hrv_quality_status}")
+                    
                     if quality is not None:
                         print(f"Quality Score: {quality:.2f}")
-                
-                if rf_model_loaded and scaler_loaded and label_encoder_loaded:
-                    if last_hr is not None and last_sdnn is not None and last_rmssd is not None:
+                    
+                    metrics_data = {
+                        "timestamp": timestamp,
+                        "hr": {"value": last_hr, "unit": "bpm"},
+                        "br": {"value": last_br, "unit": "brpm"},
+                        "sdnn": {"value": last_sdnn, "unit": "ms"},
+                        "rmssd": {"value": last_rmssd, "unit": "ms"},
+                        "stress": {"value": None, "unit": ""}
+                    }
+                    predicted_stress = None
+                    if rf_model_loaded and all(v is not None for v in [last_hr, last_sdnn, last_rmssd]):
                         predicted_stress, _ = stress_detection.predict_stress(
                             last_hr, last_sdnn, last_rmssd,
                             rf_model_loaded, scaler_loaded, label_encoder_loaded
                         )
                         if predicted_stress:
-                            print(f"Stress Intensity: {predicted_stress}")
+                            metrics_data["stress"]["value"] = predicted_stress
+                            
+                    emit_metrics(metrics_data)
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
             frame_count += 1
+            time.sleep(0.01)
 
-    except KeyboardInterrupt:
-        pass
+    except Exception as e:
+        print(f"An error occurred, {e}")
 
     finally:
         capture.stop()
-        cv2.destroyAllWindows()
+        print("Processing loop has finished")
 
         # Save HR data
         if hr_data:
@@ -145,5 +147,7 @@ def profile_block(name, func, *args, **kwargs):
 
 
 if __name__ == "__main__":
-    # main()
-    profile_block("Main Function", main)
+    app = QApplication(sys.argv)
+    window = AppWindow(logic_function=main_logic)
+    window.show()
+    sys.exit(app.exec())

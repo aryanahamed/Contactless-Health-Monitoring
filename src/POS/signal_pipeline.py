@@ -9,6 +9,7 @@ def process_hr(series):
 
     last_sdnn = last_rmssd = None
     hrv_quality_status = 'N/A'
+    fft_hr = None
     
     if best_filt is not None:        
         fft_hr = calculate_hr_fft(best_filt, best_fps)
