@@ -13,12 +13,13 @@ _br_last_valid_br = 15.0
 # BR Configs
 BR_OUTLIER_WINDOW_SIZE = 8
 BR_MEDIAN_WINDOW_SIZE = 5
-BR_EMA_ALPHA = 0.03
+BR_EMA_ALPHA = 1.0
 MAX_BR_CHANGE_PER_SEC = 2
 BR_MIN_QUALITY_THRESHOLD = 1.0
 PHYSIO_MIN_BR = 8
 PHYSIO_MAX_BR = 35
 BR_MIN_MAD_FOR_Z_SCORE_CALC = 0.5
+BR_OUTLIER_WINDOW_SIZE = 8
 
 def reset_br_filters():
     global _br_history, _br_quality_history, _br_median_buffer, _br_ema_value, _br_last_timestamp, _br_last_valid_br

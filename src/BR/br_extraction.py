@@ -23,26 +23,53 @@ def extract_breathing_signal(rppg_signal, timestamps, fs):
     if cardiac_filtered_ppg is None:
         return None, None
 
-
     peak_distance = int(fs / MAX_HR_HZ)
-    peaks, _ = find_peaks(cardiac_filtered_ppg, height=np.std(cardiac_filtered_ppg) * 0.4, distance=peak_distance)
+    peaks, _ = find_peaks(
+        cardiac_filtered_ppg, 
+        prominence=np.std(cardiac_filtered_ppg) * 0.01,
+        distance=peak_distance
+    )
 
     if len(peaks) < 5:
         return None, None
 
     peak_times = timestamps[peaks]
+    
     am_signal = rppg_signal[peaks]
+    
+    if len(peak_times) < 2:
+        return None, None
+    
     ibi_signal = np.diff(peak_times)
     
-    if len(am_signal) < 2 or len(ibi_signal) < 2:
+    min_ibi = 60.0 / 180.0
+    max_ibi = 60.0 / 40.0
+    valid_ibi_mask = (ibi_signal >= min_ibi) & (ibi_signal <= max_ibi)
+    
+    if np.sum(valid_ibi_mask) < 3:
+        ibi_cleaned = np.zeros_like(am_signal[1:])
+    else:
+        median_valid_ibi = np.median(ibi_signal[valid_ibi_mask])
+        ibi_cleaned = np.copy(ibi_signal)
+        ibi_cleaned[~valid_ibi_mask] = median_valid_ibi
+    
+    ibi_times = peak_times[1:]
+    
+    if len(am_signal) < 2 or len(ibi_cleaned) < 2:
         return None, None
-
+        
     interp_time = np.arange(timestamps[0], timestamps[-1], 1.0 / RESP_SIG_INTERPOLATION_FS)
+    
     interp_am = np.interp(interp_time, peak_times, am_signal)
+    
+    interp_ibi = np.interp(interp_time, ibi_times, ibi_cleaned)
     
     am_z = (interp_am - np.mean(interp_am)) / np.std(interp_am)
     
-    return scipy.signal.detrend(am_z), interp_time
+    # For now using AM signal only
+    respiratory_signal = scipy.signal.detrend(am_z)
+    
+    return respiratory_signal, interp_time
 
 
 def calculate_breathing_rate_welch(breathing_signal, timestamps):
