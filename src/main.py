@@ -32,12 +32,16 @@ def main_logic(emit_frame, emit_metrics, should_stop):
     sdnn_data = []
     rmssd_data = []
     
+    # Signal throttling to prevent UI queue overload
+    last_emission_time = 0
+    EMISSION_THROTTLE_INTERVAL = 0.5  # 2 emissions to ui per second
+    
     rf_model_loaded, scaler_loaded, label_encoder_loaded = stress_detection.load_stress_model_assets()
 
     try:
         while not should_stop():
             frame, timestamp = capture.get_frame()
-            print(f"Frame: {frame_count}, Timestamp: {timestamp:.3f}")
+            # print(f"Frame: {frame_count}, Timestamp: {timestamp:.3f}")
             if frame is None:
                 if not capture.running.is_set() and not should_stop():
                     break
@@ -52,21 +56,22 @@ def main_logic(emit_frame, emit_metrics, should_stop):
                 fps_actual = 0.0
             if frame_count % DETECTION_INTERVAL == 0:
                 roi_class.process_frame(frame, timestamp)
-            vis_frame = draw_hulls(frame, roi_class.hulls,roi_class.region_cords,
+                vis_frame = draw_hulls(frame, roi_class.hulls,roi_class.region_cords,
                                    roi_class.valid_rois, roi_class.thetas[0], fps_actual)
-            emit_frame(vis_frame)
+                emit_frame(vis_frame)
             if roi_class.patches:
                 series = series_generator.get_series(roi_class.patches, timestamp)
                 if series:
                     last_hr, last_sdnn, last_rmssd, quality, hrv_quality_status = signal_pipeline.process_hr(series)
                     last_br = breathing_pipeline.process_breathing(series)
 
-                    # # Heartpy implementation
+                    # Heartpy implementation
                     # forehead = series["forehead"][:, 1]
                     # filtered_signal = hp.filter_signal(forehead, cutoff=[0.67, 3.0], sample_rate=30, order=3, filtertype='bandpass')
                     # working_data, measures = hp.process(filtered_signal, 30.0)
-                    # print("Heart rate(HeartPy):", measures['bpm'])
-                    # hr_data.append((timestamp, measures['bpm']))
+                    # last_hr = measures['bpm'] if 'bpm' in measures else None
+                    # # print("Heart rate(HeartPy):", measures['bpm'])
+                    # # hr_data.append((timestamp, measures['bpm']))
 
 
                     #collector.append(u, series)
@@ -77,13 +82,11 @@ def main_logic(emit_frame, emit_metrics, should_stop):
                     
                     if last_hr is not None: hr_data.append((timestamp, last_hr))
                     if last_br is not None: br_data.append((timestamp, last_br))
-                    if last_sdnn is not None: sdnn_data.append((timestamp, last_sdnn))
-                    if last_rmssd is not None: rmssd_data.append((timestamp, last_rmssd))
                     
-                    print(f"HRV Quality: {hrv_quality_status}")
+                    # print(f"HRV Quality: {hrv_quality_status}")
                     
-                    if quality is not None:
-                        print(f"Quality Score: {quality:.2f}")
+                    # if quality is not None:
+                        # print(f"Quality Score: {quality:.2f}")
                     
                     metrics_data = {
                         "timestamp": timestamp,
@@ -101,8 +104,12 @@ def main_logic(emit_frame, emit_metrics, should_stop):
                         )
                         if predicted_stress:
                             metrics_data["stress"]["value"] = predicted_stress
-                            
-                    emit_metrics(metrics_data)
+
+                    # Signal throttling to prevent ui queue overload
+                    current_time = time.time()
+                    if current_time - last_emission_time >= EMISSION_THROTTLE_INTERVAL:
+                        emit_metrics(metrics_data)
+                        last_emission_time = current_time
 
             frame_count += 1
             time.sleep(0.01)

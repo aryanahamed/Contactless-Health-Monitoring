@@ -14,7 +14,7 @@ _last_valid_bpm = 70.0
 OUTLIER_WINDOW_SIZE = 8
 MEDIAN_WINDOW_SIZE = 7
 EMA_ALPHA = 0.12  # More smoothing = lower alpha
-MAX_BPM_CHANGE_PER_SEC = 6
+MAX_BPM_CHANGE_PER_SEC = 3
 MIN_QUALITY_THRESHOLD = 1.2
 PHYSIO_MIN_BPM = 40
 PHYSIO_MAX_BPM = 180
@@ -50,17 +50,14 @@ def reject_outliers(new_bpm, quality_score):
     if _last_timestamp is not None and _last_valid_bpm is not None and not startup_phase:
         time_diff = current_time - _last_timestamp
         if time_diff > 0:
-            max_allowed_change = MAX_BPM_CHANGE_PER_SEC * time_diff
+            max_allowed_change = MAX_BPM_CHANGE_PER_SEC
             actual_change = abs(new_bpm - _last_valid_bpm)
             stuck_duration = current_time - _last_timestamp
-            if stuck_duration > 3.0 and quality_score > 1.5:
-                print("Got stuck for too long!! RESET INITIATED")
-                max_allowed_change *= 2.0
+            if stuck_duration > 5.0 and quality_score > 3.0:
+                # print("Got stuck for too long!! RESET INITIATED")
+                max_allowed_change *= 1.5
             if actual_change > max_allowed_change:
-                print(f"Softly-rejecting: {actual_change:.1f} > {max_allowed_change:.1f}")
-                soft_bpm = (_last_valid_bpm * 0.7) + (new_bpm * 0.3)
-                _last_timestamp = current_time
-                _last_valid_bpm = soft_bpm
+                # print(f"Completely rejecting outlier: {actual_change:.1f} > {max_allowed_change:.1f}")
                 return None
     
     if len(_bpm_history) >= 3 and not startup_phase:

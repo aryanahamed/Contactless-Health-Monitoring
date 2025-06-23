@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.signal
 from numba import njit
+from POS.chrom_processing import apply_chrom_projection
 from config import (
     MIN_SAMPLES_FOR_POS,
     MIN_SAMPLES_FOR_QUALITY,
@@ -104,25 +105,6 @@ def apply_butterworth_bandpass(signal_buffer, low_cut_hz, high_cut_hz, fps, orde
     return scipy.signal.filtfilt(b, a, signal_buffer)
 
 
-@njit(cache=True)
-def _compute_power_sums(power_spectrum, freqs, band_min, band_max):
-    signal_power = 0.0
-    noise_power_low = 0.0
-    noise_power_high = 0.0
-    
-    for i in range(len(freqs)):
-        freq = freqs[i]
-        power = power_spectrum[i]
-        
-        if band_min <= freq <= band_max:
-            signal_power += power
-        elif 0.5 <= freq < band_min:
-            noise_power_low += power
-        elif band_max < freq <= 5.0:
-            noise_power_high += power
-    
-    return signal_power, noise_power_low + noise_power_high
-
 
 def calculate_signal_quality(filtered_signal, fps):
     if filtered_signal is None or len(filtered_signal) < MIN_SAMPLES_FOR_QUALITY or fps <= 0:
@@ -164,7 +146,7 @@ def calculate_signal_quality(filtered_signal, fps):
     except Exception:
         return 0.0
 
-def select_best_pos_signal(input_data):
+def select_best_signal(input_data):
     timestamps_np = np.asarray(input_data["timestamps"], dtype=np.float64)
     
     valid_regions = {}
@@ -175,10 +157,11 @@ def select_best_pos_signal(input_data):
                 valid_regions[region] = rgb_array
     
     if not valid_regions:
-        return None, None, None, None, -1.0
+        return None, None, None, None, -1.0, "none"
     
     best_result = None
     highest_quality = -1.0
+    best_method = "none"
     
     for region, rgb_buffer in valid_regions.items():
         if rgb_buffer.shape[0] < MIN_SAMPLES_FOR_POS:
@@ -193,23 +176,30 @@ def select_best_pos_signal(input_data):
             fps = (len(cleaned_timestamps) - 1) / duration if duration > 0 else DEFAULT_TARGET_FPS
         else:
             fps = DEFAULT_TARGET_FPS
-        pos_signal = apply_pos_projection(cleaned_rgb)
         
-        if pos_signal is None:
-            continue
-        
-        filtered_pos = apply_butterworth_bandpass(pos_signal, BAND_MIN_HZ, BAND_MAX_HZ, fps, order=3)
-        if filtered_pos is None:
-            continue
-        
-        filtered_pos = apply_windowing(filtered_pos, window_type='hann')
-        quality_score = calculate_signal_quality(filtered_pos, fps)
-        
-        if quality_score > highest_quality:
-            highest_quality = quality_score
-            best_result = (filtered_pos, cleaned_rgb, cleaned_timestamps, fps, quality_score)
+        # Using both POS and CHROM
+        for method_name, projection_func in [("POS", apply_pos_projection), ("CHROM", apply_chrom_projection)]:
+            signal = projection_func(cleaned_rgb)
             
-            if quality_score > 8.1:
-                break
+            if signal is None:
+                continue
+            
+            filtered_signal = apply_butterworth_bandpass(signal, BAND_MIN_HZ, BAND_MAX_HZ, fps, order=3)
+            if filtered_signal is None:
+                continue
+            
+            filtered_signal = apply_windowing(filtered_signal, window_type='hann')
+            quality_score = calculate_signal_quality(filtered_signal, fps)
+            
+            if quality_score > highest_quality:
+                highest_quality = quality_score
+                best_result = (filtered_signal, cleaned_rgb, cleaned_timestamps, fps, quality_score)
+                best_method = f"{region}_{method_name}"
+                
+                if quality_score > 8.5:
+                    break
+        
+        if highest_quality > 8.5:
+            break
     
-    return best_result if best_result else (None, None, None, None, -1.0)
+    return (*best_result, best_method) if best_result else (None, None, None, None, -1.0, "none")

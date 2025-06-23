@@ -1,7 +1,6 @@
 import sys
 import numpy as np
 import time
-import cv2
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout,
                              QHBoxLayout, QGridLayout, QGroupBox, QSizePolicy, QGraphicsDropShadowEffect, QPushButton)
 from PyQt6.QtGui import QPixmap, QImage, QFont, QColor
@@ -11,7 +10,8 @@ from pyqtgraph import PlotWidget
 import qtawesome as qta
 
 
-from UI.ui_worker import ProcessingWorker
+from UI.ui_worker import ProcessingWorker, PlotUpdateWorker
+# from ui_worker import ProcessingWorker, PlotUpdateWorker
 
 # Change these colors to change the app's look
 COLOR_BACKGROUND = "#252931"
@@ -44,12 +44,9 @@ class AppWindow(QMainWindow):
         pg.setConfigOption('foreground', COLOR_TEXT_SECONDARY)
 
         self.worker = None
+        self.plot_worker = None
         self.start_time = None
-        self.logic_function = logic_function  # Change logic function if needed
-        self.hr_history = []  # Stores heart rate values
-        self.br_history = []  # Stores breathing rate values
-        self.sdnn_history = []  # Stores SDNN values
-        self.rmssd_history = []  # Stores RMSSD values
+        self.logic_function = logic_function
 
         # Change styles here to change how the app looks
         self.setStyleSheet(f"""
@@ -215,10 +212,14 @@ class AppWindow(QMainWindow):
         print("UI: Starting monitoring...")
         self.reset_monitoring()
         
-        self.worker = ProcessingWorker(logic_function=self.logic_function)
+        self.plot_worker = PlotUpdateWorker()
+        self.plot_worker.plot_data_ready.connect(self.apply_plot_data, Qt.ConnectionType.QueuedConnection)
+        self.plot_worker.start()
         
-        self.worker.new_frame.connect(self.update_video_frame)
-        self.worker.new_metrics.connect(self.process_new_data_point)
+        self.worker = ProcessingWorker(logic_function=self.logic_function)
+        self.worker.new_frame.connect(self.update_video_frame, Qt.ConnectionType.QueuedConnection)
+        self.worker.new_metrics.connect(self.process_new_data_point, Qt.ConnectionType.QueuedConnection)
+        self.worker.new_metrics.connect(self.plot_worker.process_data_point, Qt.ConnectionType.QueuedConnection)
         
         self.worker.start()
         
@@ -228,11 +229,15 @@ class AppWindow(QMainWindow):
 
     def stop_monitoring(self):
         # Call this to stop monitoring
-        if not self.worker or not self.worker.isRunning():
-            return
-        self.worker.stop()
-        self.worker.wait()
-        self.worker = None
+        if self.worker and self.worker.isRunning():
+            self.worker.stop()
+            self.worker.wait()
+            self.worker = None
+            
+        if self.plot_worker and self.plot_worker.isRunning():
+            self.plot_worker.stop()
+            self.plot_worker = None
+            
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
         self.update_status(status="paused")
@@ -242,11 +247,11 @@ class AppWindow(QMainWindow):
         self.stop_monitoring()
         self.start_time = None
         
-        self.hr_history.clear()
-        self.br_history.clear()
-        self.sdnn_history.clear()
-        self.rmssd_history.clear()
+        # Reset plot worker data if it exists
+        if self.plot_worker:
+            self.plot_worker.reset_data()
         
+        # Clear plot curves
         self.hr_curve.setData([], [])
         self.br_curve.setData([], [])
         self.sdnn_curve.setData([], [])
@@ -327,33 +332,17 @@ class AppWindow(QMainWindow):
         self.video_display_label.setPixmap(scaled_pixmap)
         
     @pyqtSlot(dict)
-    def process_new_data_point(self, data_point):        
+    def process_new_data_point(self, data_point):
         self.update_metrics(data_point)
         
         hr_val = data_point.get("hr", {}).get("value")
         br_val = data_point.get("br", {}).get("value")
         self.update_status("monitoring", avg_hr=hr_val, avg_br=br_val)
         
+        # Set start time for UI reference
         timestamp = data_point.get("timestamp")
-        if timestamp is None:
-            return
-
-        if self.start_time is None:
+        if timestamp is not None and self.start_time is None:
             self.start_time = timestamp
-
-        if hr_val is not None: self.hr_history.append((timestamp, hr_val))
-        if br_val is not None: self.br_history.append((timestamp, br_val))
-        
-        sdnn_val = data_point.get("sdnn", {}).get("value")
-        if sdnn_val is not None: self.sdnn_history.append((timestamp, sdnn_val))
-        
-        rmssd_val = data_point.get("rmssd", {}).get("value")
-        if rmssd_val is not None: self.rmssd_history.append((timestamp, rmssd_val))
-        
-        self.update_plot_data(hr_data=self.hr_history,
-                              br_data=self.br_history,
-                              sdnn_data=self.sdnn_history,
-                              rmssd_data=self.rmssd_history)
         
 
     @pyqtSlot(dict)
@@ -381,37 +370,31 @@ class AppWindow(QMainWindow):
         if avg_hr is not None: self.avg_hr_label.setText(f"{avg_hr:.1f} bpm")
         if avg_br is not None: self.avg_br_label.setText(f"{avg_br:.1f} brpm")
 
-    @pyqtSlot(list, list, list, list)
-    def update_plot_data(self, hr_data, br_data, sdnn_data, rmssd_data):
-        if not hr_data:
-            return
-
-        def get_plot_arrays(data_list):
-            if not data_list:
-                return np.array([]), np.array([])
+    @pyqtSlot(dict)
+    def apply_plot_data(self, plot_data):
+        """Lightweight method to apply pre-processed plot data from PlotUpdateWorker"""
+        try:
+            hr_times, hr_values = plot_data['hr_data']
+            br_times, br_values = plot_data['br_data']
+            sdnn_times, sdnn_values = plot_data['sdnn_data']
+            rmssd_times, rmssd_values = plot_data['rmssd_data']
+            current_elapsed_time = plot_data['current_time']
             
-            times = np.array([item[0] for item in data_list]) - self.start_time
-            values = np.array([item[1] for item in data_list])
-            return times, values
+            self.hr_curve.setData(hr_times, hr_values)
+            self.br_curve.setData(br_times, br_values)
+            self.sdnn_curve.setData(sdnn_times, sdnn_values)
+            self.rmssd_curve.setData(rmssd_times, rmssd_values)
 
-        hr_times, hr_values = get_plot_arrays(hr_data)
-        br_times, br_values = get_plot_arrays(br_data)
-        sdnn_times, sdnn_values = get_plot_arrays(sdnn_data)
-        rmssd_times, rmssd_values = get_plot_arrays(rmssd_data)
-        
-        self.hr_curve.setData(hr_times, hr_values)
-        self.br_curve.setData(br_times, br_values)
-        self.sdnn_curve.setData(sdnn_times, sdnn_values)
-        self.rmssd_curve.setData(rmssd_times, rmssd_values)
-
-        if hr_times.size > 0:
-            current_elapsed_time = hr_times[-1]
-            
-            for plot in [self.hr_plot_widget, self.br_plot_widget, self.hrv_plot_widget]:
-                plot.getPlotItem().setXRange(max(0, current_elapsed_time - 30), current_elapsed_time + 1)
-                plot.getPlotItem().enableAutoRange(axis='y', enable=True)
+            if hr_times.size > 0:
+                for plot in [self.hr_plot_widget, self.br_plot_widget, self.hrv_plot_widget]:
+                    plot.getPlotItem().setXRange(max(0, current_elapsed_time - 30), current_elapsed_time + 1)
+                    plot.getPlotItem().enableAutoRange(axis='y', enable=True)
+                    
+        except Exception as e:
+            print(f"Error applying plot data: {e}")
 
     def closeEvent(self, event):
+        print("Closing application - stopping all workers")
         self.stop_monitoring()
         event.accept()
 

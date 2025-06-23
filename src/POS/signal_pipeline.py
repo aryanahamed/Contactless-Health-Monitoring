@@ -1,11 +1,11 @@
-from POS.pos_processing import select_best_pos_signal, apply_windowing
+from POS.pos_processing import select_best_signal, apply_windowing
 from POS.signal_extraction import (
     calculate_hr_fft, find_signal_peaks, calculate_hrv
 )
 from POS.smoothing import smooth_bpm_multi_stage, get_current_smoothed_bpm
 
 def process_hr(series):
-    best_filt, _, best_ts, best_fps, quality = select_best_pos_signal(series)
+    best_filt, _, best_ts, best_fps, quality, hr_signal = select_best_signal(series)
 
     last_sdnn = last_rmssd = None
     hrv_quality_status = 'N/A'
@@ -30,5 +30,5 @@ def process_hr(series):
         smoothed_hr = smooth_bpm_multi_stage(fft_hr, quality)
     else:
         smoothed_hr = get_current_smoothed_bpm()
-    
+
     return smoothed_hr, last_sdnn, last_rmssd, quality, hrv_quality_status

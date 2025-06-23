@@ -1,10 +1,10 @@
 import numpy as np
-from POS.pos_processing import select_best_pos_signal
+from POS.pos_processing import select_best_signal
 from BR.br_extraction import extract_breathing_signal, calculate_breathing_rate_welch
 from BR.smoothing_br import smooth_br_multi_stage
 
 def process_breathing(series):
-    best_pos_signal, best_rgb, best_ts, fps, quality = select_best_pos_signal(series)
+    best_pos_signal, _, best_ts, fps, quality, _ = select_best_signal(series)
     last_br = None
     
     if best_pos_signal is not None and best_ts is not None and len(best_ts) > 1:
