@@ -1,4 +1,4 @@
-from POS.pos_processing import select_best_signal, apply_windowing
+from POS.signal_processing import select_best_signal, apply_windowing
 from POS.signal_extraction import (
     calculate_hr_fft, find_signal_peaks, calculate_hrv
 )

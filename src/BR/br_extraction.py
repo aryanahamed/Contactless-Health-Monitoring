@@ -10,7 +10,7 @@ from config import (
     MAX_HR_HZ,
     RESP_SIG_INTERPOLATION_FS
 )
-from POS.pos_processing import apply_butterworth_bandpass
+from POS.signal_processing import apply_butterworth_bandpass
 
 
 def extract_breathing_signal(rppg_signal, timestamps, fs):

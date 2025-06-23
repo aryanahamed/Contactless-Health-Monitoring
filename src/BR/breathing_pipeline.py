@@ -1,5 +1,5 @@
 import numpy as np
-from POS.pos_processing import select_best_signal
+from POS.signal_processing import select_best_signal
 from BR.br_extraction import extract_breathing_signal, calculate_breathing_rate_welch
 from BR.smoothing_br import smooth_br_multi_stage
 
