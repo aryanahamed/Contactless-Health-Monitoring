@@ -93,18 +93,15 @@ class AppWindow(QMainWindow):
         self.icon_status_search = qta.icon('fa5s.sync-alt', color=COLOR_ACCENT_PRIMARY, animation=qta.Spin(self))
         self.icon_status_ready = qta.icon('fa5s.power-off', color=COLOR_TEXT_SECONDARY)
 
-
         self.hr_group = self._create_metrics_group("Heart Rate (HR)", "hr", icon_hr)
         self.br_group = self._create_metrics_group("Breathing Rate (BR)", "br", icon_br)
         self.stress_group = self._create_metrics_group("Stress Level", "stress", icon_stress)
         self.sdnn_group = self._create_metrics_group("SDNN", "sdnn", icon_sdnn)
         self.rmssd_group = self._create_metrics_group("RMSSD", "rmssd", icon_rmssd)
 
-        left_column_layout.addWidget(self.hr_group)
-        left_column_layout.addWidget(self.br_group)
-        left_column_layout.addWidget(self.stress_group)
-        left_column_layout.addWidget(self.sdnn_group)
-        left_column_layout.addWidget(self.rmssd_group)
+        for group in [self.hr_group, self.br_group, self.stress_group, self.sdnn_group, self.rmssd_group]:
+            left_column_layout.addWidget(group)
+
         self.status_panel = self._create_status_panel()
         left_column_layout.addWidget(self.status_panel)
         left_column_layout.addStretch()
@@ -115,28 +112,38 @@ class AppWindow(QMainWindow):
         right_column_layout.setContentsMargins(0, 0, 0, 0)
 
         video_group_box = QGroupBox("Live Video Feed")
-        video_group_box_layout = QVBoxLayout(video_group_box)
+        video_group_box.setStyleSheet("QGroupBox { color: white; font-weight: bold; border-radius: 8px; padding: 8px; }")
+        video_layout = QVBoxLayout(video_group_box)
         self.video_display_label = QLabel("Press Start to Begin Monitoring")
         self.video_display_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.video_display_label.setMinimumSize(320, 240)
         self.video_display_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        video_group_box_layout.addWidget(self.video_display_label)
+        video_layout.addWidget(self.video_display_label)
         self._apply_shadow_effect(video_group_box)
 
         self.hr_plot_widget = self._create_plot("HR over Time", "HR (bpm)", PLOT_PEN_HR)
         self.hr_curve = self.hr_plot_widget.getPlotItem().listDataItems()[0]
 
-        self.hrv_plot_widget = self._create_plot("HRV (SDNN & RMSSD)", "HRV (ms)")
-        self.hrv_plot_widget.addLegend(offset=(-10, 10), textColor=COLOR_TEXT_SECONDARY,
-                                       labelTextColor=COLOR_TEXT_SECONDARY)
-        self.sdnn_curve = self.hrv_plot_widget.plot(pen=PLOT_PEN_SDNN, name="SDNN")
-        self.rmssd_curve = self.hrv_plot_widget.plot(pen=PLOT_PEN_RMSSD, name="RMSSD")
+        # HRV legend row
+        hrv_title_row = QHBoxLayout()
+        hrv_title_label = QLabel("HRV (SDNN & RMSSD)")
+        hrv_title_label.setStyleSheet(f"color: {COLOR_TEXT_SECONDARY}; font-size: 11pt; font-weight: bold;")
+        hrv_title_row.addWidget(hrv_title_label)
+        hrv_title_row.addStretch()
+        hrv_legend_label = QLabel("🟡 SDNN   🟢 RMSSD")
+        hrv_legend_label.setStyleSheet("font-size: 10pt; padding-left: 10px;")
+        hrv_title_row.addWidget(hrv_legend_label)
+
+        self.hrv_plot_widget = self._create_plot("", "HRV (ms)")
+        self.sdnn_curve = self.hrv_plot_widget.getPlotItem().plot(pen=PLOT_PEN_SDNN)
+        self.rmssd_curve = self.hrv_plot_widget.getPlotItem().plot(pen=PLOT_PEN_RMSSD)
 
         self.br_plot_widget = self._create_plot("BR over Time", "BR (brpm)", PLOT_PEN_BR)
         self.br_curve = self.br_plot_widget.getPlotItem().listDataItems()[0]
 
         right_column_layout.addWidget(video_group_box, stretch=2)
         right_column_layout.addWidget(self.hr_plot_widget, stretch=1)
+        right_column_layout.addLayout(hrv_title_row)
         right_column_layout.addWidget(self.hrv_plot_widget, stretch=1)
         right_column_layout.addWidget(self.br_plot_widget, stretch=1)
 

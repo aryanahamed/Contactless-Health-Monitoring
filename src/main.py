@@ -10,7 +10,7 @@ import io
 from POS import signal_pipeline
 from BR import breathing_pipeline
 from STRESS import stress_detection
-import heartpy as hp
+# import heartpy as hp
 from PyQt6.QtWidgets import QApplication
 from UI.pyqt_ui import AppWindow
 import sys
