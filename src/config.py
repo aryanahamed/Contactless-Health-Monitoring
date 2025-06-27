@@ -9,8 +9,8 @@ import numpy as np
 
 
 # camera settings
-# camera_id = "src/vid.avi" # depends on ur device figure it out
-camera_id = 0  # default camera ID for webcam
+camera_id = "src/vid.avi" # depends on ur device figure it out
+# camera_id = 0  # default camera ID for webcam
 
 
 # landmark indices for each region

@@ -9,7 +9,7 @@ import psutil
 #and allowing a get method for the main to get the frame
 class CaptureThread:
     # not sure if to not limit queue size, might cause series memory issues
-    def __init__(self, max_queue_size=12):
+    def __init__(self, max_queue_size=2000):
         #initialize the thread
         self.cap = cv2.VideoCapture(camera_id)
         # checking if camera id is a video file not webcam

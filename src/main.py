@@ -7,7 +7,7 @@ import cProfile
 import pstats
 from collections import deque
 import io
-from POS import signal_pipeline
+from POS import signal_pipeline, signal_processing
 from BR import breathing_pipeline
 from STRESS import stress_detection
 # import heartpy as hp
@@ -62,9 +62,14 @@ def main_logic(emit_frame, emit_metrics, should_stop):
             if roi_class.patches:
                 series = series_generator.get_series(roi_class.patches, timestamp)
                 if series:
-                    last_hr, last_sdnn, last_rmssd, quality, hrv_quality_status = signal_pipeline.process_hr(series)
-                    last_br = breathing_pipeline.process_breathing(series)
-
+                    best_filt, _, best_ts, best_fps, quality, _ = signal_processing.select_best_signal(series)
+                    last_hr, last_sdnn, last_rmssd, hrv_quality_status = signal_pipeline.process_hr_from_signal(
+                        best_filt, best_ts, best_fps, quality
+                    )
+                    last_br = breathing_pipeline.process_breathing(
+                        best_filt, best_ts, best_fps, quality
+                    )
+                    
                     # Heartpy implementation
                     # forehead = series["forehead"][:, 1]
                     # filtered_signal = hp.filter_signal(forehead, cutoff=[0.67, 3.0], sample_rate=30, order=3, filtertype='bandpass')

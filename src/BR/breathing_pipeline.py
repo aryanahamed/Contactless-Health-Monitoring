@@ -3,12 +3,11 @@ from POS.signal_processing import select_best_signal
 from BR.br_extraction import extract_breathing_signal, calculate_breathing_rate_welch
 from BR.smoothing_br import smooth_br_multi_stage
 
-def process_breathing(series):
-    best_signal, _, best_ts, fps, quality, _ = select_best_signal(series)
+def process_breathing(best_signal, best_ts, fps, quality):
     last_br = None
 
     if best_signal is not None and best_ts is not None and len(best_ts) > 1:
-        fs = 1.0 / np.median(np.diff(best_ts)) if fps is None else fps
+        fs = fps
         window_center_time = np.mean(best_ts)
 
         rppg_signal_1d = best_signal
