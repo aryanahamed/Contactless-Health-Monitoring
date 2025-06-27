@@ -13,9 +13,9 @@ _br_last_valid_br = 15.0
 # BR Configs
 BR_OUTLIER_WINDOW_SIZE = 8
 BR_MEDIAN_WINDOW_SIZE = 5
-BR_EMA_ALPHA = 1.0
+BR_EMA_ALPHA = 0.15
 MAX_BR_CHANGE_PER_SEC = 2
-BR_MIN_QUALITY_THRESHOLD = 1.0
+BR_MIN_QUALITY_THRESHOLD = 3.0
 PHYSIO_MIN_BR = 8
 PHYSIO_MAX_BR = 35
 BR_MIN_MAD_FOR_Z_SCORE_CALC = 0.5
@@ -43,16 +43,14 @@ def reject_br_outliers(new_br, current_timestamp, quality_score):
     if new_br < PHYSIO_MIN_BR or new_br > PHYSIO_MAX_BR:
         return None
 
-    startup_phase = len(_br_history) < 5
-
-    if _br_last_timestamp is not None and _br_last_valid_br is not None and not startup_phase:
+    if _br_last_timestamp is not None and _br_last_valid_br is not None:
         time_diff = current_timestamp - _br_last_timestamp
         if time_diff > 0:
             max_allowed_change = MAX_BR_CHANGE_PER_SEC * time_diff
             if abs(new_br - _br_last_valid_br) > max_allowed_change:
                 return None
 
-    if len(_br_history) >= 3 and not startup_phase:
+    if len(_br_history) >= 3:
         recent_values = np.array(list(_br_history)[-BR_OUTLIER_WINDOW_SIZE:])
         if len(recent_values) >= 3:
             median_recent = np.median(recent_values)
@@ -94,18 +92,19 @@ def apply_br_exponential_smoothing(median_br):
     return _br_ema_value
 
 def smooth_br_multi_stage(new_br, timestamp, quality_score=1.0):
-    global _br_history, _br_quality_history
+    global _br_history, _br_quality_history, _br_ema_value
 
     filtered_br = reject_br_outliers(new_br, timestamp, quality_score)
     
     if filtered_br is not None:
         _br_history.append(filtered_br)
         _br_quality_history.append(quality_score)
+        
         median_br = add_to_br_median_filter(filtered_br)
+        final_br = apply_br_exponential_smoothing(median_br)
     else:
-        median_br = add_to_br_median_filter(None)
+        final_br = _br_ema_value
 
-    final_br = apply_br_exponential_smoothing(median_br)
     return final_br
 
 def get_current_smoothed_br():

@@ -36,7 +36,7 @@ def main_logic(emit_frame, emit_metrics, should_stop):
     last_emission_time = 0
     EMISSION_THROTTLE_INTERVAL = 0.5  # 2 emissions to ui per second
     
-    rf_model_loaded, scaler_loaded, label_encoder_loaded = stress_detection.load_stress_model_assets()
+    # rf_model_loaded, scaler_loaded, label_encoder_loaded = stress_detection.load_stress_model_assets()
 
     try:
         while not should_stop():
@@ -96,14 +96,14 @@ def main_logic(emit_frame, emit_metrics, should_stop):
                         "rmssd": {"value": last_rmssd, "unit": "ms"},
                         "stress": {"value": None, "unit": ""}
                     }
-                    predicted_stress = None
-                    if rf_model_loaded and all(v is not None for v in [last_hr, last_sdnn, last_rmssd]):
-                        predicted_stress, _ = stress_detection.predict_stress(
-                            last_hr, last_sdnn, last_rmssd,
-                            rf_model_loaded, scaler_loaded, label_encoder_loaded
-                        )
-                        if predicted_stress:
-                            metrics_data["stress"]["value"] = predicted_stress
+                    # predicted_stress = None
+                    # if rf_model_loaded and all(v is not None for v in [last_hr, last_sdnn, last_rmssd]):
+                    #     predicted_stress, _ = stress_detection.predict_stress(
+                    #         last_hr, last_sdnn, last_rmssd,
+                    #         rf_model_loaded, scaler_loaded, label_encoder_loaded
+                    #     )
+                    #     if predicted_stress:
+                    #         metrics_data["stress"]["value"] = predicted_stress
 
                     # Signal throttling to prevent ui queue overload
                     current_time = time.time()
@@ -153,8 +153,18 @@ def profile_block(name, func, *args, **kwargs):
     return result
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":    
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--profile', action='store_true', help='Enable profiling for main_logic')
+    args = parser.parse_args()
+
     app = QApplication(sys.argv)
-    window = AppWindow(logic_function=main_logic)
+    if args.profile:
+        def profiled_logic(emit_frame, emit_metrics, should_stop):
+            return profile_block('main_logic', main_logic, emit_frame, emit_metrics, should_stop)
+        window = AppWindow(logic_function=profiled_logic)
+    else:
+        window = AppWindow(logic_function=main_logic)
     window.show()
     sys.exit(app.exec())

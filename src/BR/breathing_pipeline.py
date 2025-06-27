@@ -4,14 +4,14 @@ from BR.br_extraction import extract_breathing_signal, calculate_breathing_rate_
 from BR.smoothing_br import smooth_br_multi_stage
 
 def process_breathing(series):
-    best_pos_signal, _, best_ts, fps, quality, _ = select_best_signal(series)
+    best_signal, _, best_ts, fps, quality, _ = select_best_signal(series)
     last_br = None
-    
-    if best_pos_signal is not None and best_ts is not None and len(best_ts) > 1:
+
+    if best_signal is not None and best_ts is not None and len(best_ts) > 1:
         fs = 1.0 / np.median(np.diff(best_ts)) if fps is None else fps
         window_center_time = np.mean(best_ts)
-        
-        rppg_signal_1d = best_pos_signal
+
+        rppg_signal_1d = best_signal
         br_signal, br_ts = extract_breathing_signal(rppg_signal_1d, best_ts, fs)
         
         if br_signal is not None and br_ts is not None:

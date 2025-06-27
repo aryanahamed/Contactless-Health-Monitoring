@@ -37,7 +37,10 @@ def reject_outliers(new_bpm, quality_score):
     if new_bpm is None or np.isnan(new_bpm):
         return None
     
-    if quality_score < MIN_QUALITY_THRESHOLD:
+    is_establishing_baseline = len(_bpm_history) == 0
+    required_quality = 4.0 if is_establishing_baseline else MIN_QUALITY_THRESHOLD
+
+    if quality_score < required_quality:
         return None
     
     if new_bpm < PHYSIO_MIN_BPM or new_bpm > PHYSIO_MAX_BPM:
@@ -45,28 +48,18 @@ def reject_outliers(new_bpm, quality_score):
         return None
     
     current_time = time.time()
-    startup_phase = len(_bpm_history) < 5
 
-    if _last_timestamp is not None and _last_valid_bpm is not None and not startup_phase:
+
+    if _last_timestamp is not None and _last_valid_bpm is not None:
         time_diff = current_time - _last_timestamp
         if time_diff > 0:
             max_allowed_change = MAX_BPM_CHANGE_PER_SEC
             actual_change = abs(new_bpm - _last_valid_bpm)
             stuck_duration = current_time - _last_timestamp
-            if stuck_duration > 5.0 and quality_score > 3.0:
-                # print("Got stuck for too long!! RESET INITIATED")
-                max_allowed_change *= 1.5
-            if actual_change > max_allowed_change:
-                # print(f"Completely rejecting outlier: {actual_change:.1f} > {max_allowed_change:.1f}")
-                return None
-    
-    if len(_bpm_history) >= 3 and not startup_phase:
-        recent_values = list(_bpm_history)[-5:]
-        median_recent = np.median(recent_values)
-        mad = np.median(np.abs(np.array(recent_values) - median_recent))
-        if mad >= MIN_MAD_FOR_Z_SCORE_CALC:  
-            modified_z_score = 0.6745 * (new_bpm - median_recent) / mad
-            if abs(modified_z_score) > 1.5:
+            
+            if stuck_duration > 2.0 and quality_score > 3.0:
+                reset_all_filters()
+            elif actual_change > max_allowed_change:
                 return None
     
     _last_timestamp = current_time

@@ -1,16 +1,16 @@
 # config.py
 
 # here we gonna store all the global pipeline parameters and some global functions
-
-import os
-import numpy as np
 from mediapipe.tasks import python as mp_tasks
 from mediapipe.tasks.python.vision.face_landmarker import FaceLandmarkerOptions
+import os
+import numpy as np
+
 
 
 # camera settings
-camera_id = "src/vid.avi" # depends on ur device figure it out
-# camera_id = 0  # default camera ID for webcam
+# camera_id = "src/vid.avi" # depends on ur device figure it out
+camera_id = 0  # default camera ID for webcam
 
 
 # landmark indices for each region
@@ -60,8 +60,8 @@ def get_face_landmarker_options():
 # -- pos_processing -- #
 BAND_MIN_HZ = 0.67  # 40 BPM
 BAND_MAX_HZ = 3.0  # 180 BPM
-MIN_SAMPLES_FOR_POS = 300
-MIN_SAMPLES_FOR_QUALITY = 300
+MIN_SAMPLES_FOR_POS = 340
+MIN_SAMPLES_FOR_QUALITY = 340
 DEFAULT_TARGET_FPS = 30.0
 
 
@@ -71,8 +71,8 @@ MAX_HR_HZ = 3.0  # 180 bpm
 MIN_PEAKS_FOR_HRV = 12 # Minimum peaks for HRV calculation
 MIN_VALID_IBI_S = 0.333  # Min IBI in seconds (180 BPM)
 MAX_VALID_IBI_S = 1.5  # Max IBI in seconds (40 BPM)
-MAX_ACCEPTABLE_SDNN_MS = 300
-MAX_ACCEPTABLE_RMSSD_MS = 300
+MAX_ACCEPTABLE_SDNN_MS = 200
+MAX_ACCEPTABLE_RMSSD_MS = 200
 
 MIN_BR_HZ = 0.1  # 6 breaths per minute
 MAX_BR_HZ = 0.5  # 30 breaths per minute
