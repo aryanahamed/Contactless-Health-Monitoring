@@ -59,11 +59,11 @@ class PlotUpdateWorker(QThread):
                 self.br_history.append((timestamp, br_val))
             
             sdnn_val = data_point.get("sdnn", {}).get("value")
-            if sdnn_val is not None:
+            if sdnn_val is not None and sdnn_val != 0:
                 self.sdnn_history.append((timestamp, sdnn_val))
             
             rmssd_val = data_point.get("rmssd", {}).get("value")
-            if rmssd_val is not None:
+            if rmssd_val is not None and rmssd_val != 0:
                 self.rmssd_history.append((timestamp, rmssd_val))
 
             plot_data = self._process_plot_arrays()

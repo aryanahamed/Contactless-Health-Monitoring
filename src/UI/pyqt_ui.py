@@ -362,7 +362,9 @@ class AppWindow(QMainWindow):
         for key, data in metrics_data.items():
             if key in metric_map:
                 value_label, unit_label = metric_map[key]
-                value = data.get("value") if data.get("value") is not None else "N/A"
+                value = data.get("value")
+                if value is None or (isinstance(value, (int, float)) and value == 0):
+                    continue
                 current_text = f"{value:.1f}" if isinstance(value, float) else str(value)
                 value_label.setText(current_text)
                 unit_label.setText(data.get("unit", ""))
