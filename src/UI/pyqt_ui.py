@@ -369,7 +369,7 @@ class AppWindow(QMainWindow):
                 value_label.setText(current_text)
                 unit_label.setText(data.get("unit", ""))
                 if key == "stress":
-                    stress_color = {"Low": COLOR_ACCENT_SECONDARY, "Medium": COLOR_ACCENT_WARN, "High": COLOR_ACCENT_ALERT}.get(current_text, COLOR_TEXT_PRIMARY)
+                    stress_color = {"Low Intensity": COLOR_ACCENT_SECONDARY, "Medium Intensity": COLOR_ACCENT_WARN, "High Intensity": COLOR_ACCENT_ALERT}.get(current_text, COLOR_TEXT_PRIMARY)
                     value_label.setStyleSheet(f"color: {stress_color};")
                     value_label.setFont(QFont("Segoe UI", 28 if current_text != "N/A" else 32, QFont.Weight.Bold))
 
