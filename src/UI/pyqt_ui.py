@@ -4,14 +4,14 @@ import time
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout,
                              QHBoxLayout, QGridLayout, QGroupBox, QSizePolicy, QGraphicsDropShadowEffect, QPushButton, QFrame)
 from PyQt6.QtGui import QPixmap, QImage, QFont, QColor
-from PyQt6.QtCore import Qt, pyqtSlot
+from PyQt6.QtCore import Qt, pyqtSlot, QPropertyAnimation, QEasingCurve
 import pyqtgraph as pg
 from pyqtgraph import PlotWidget
 import qtawesome as qta
 
 
-# from UI.ui_worker import ProcessingWorker, PlotUpdateWorker
-from ui_worker import ProcessingWorker, PlotUpdateWorker
+from UI.ui_worker import ProcessingWorker, PlotUpdateWorker
+# from ui_worker import ProcessingWorker, PlotUpdateWorker
 
 # Change these colors to change the app's look
 COLOR_BACKGROUND = "#1F2227"
@@ -178,17 +178,25 @@ class AppWindow(QMainWindow):
         main_layout.addWidget(title_label)
         main_layout.addSpacing(5)
 
+        subtle_glow_color = COLOR_TEXT_SECONDARY
+        subtle_glow_params = {'blur_radius': 15, 'duration': 600}
+
         sdnn_layout, self.sdnn_info_value_label = self._create_info_row("💓 SDNN:")
+        self._setup_glow_effect(self.sdnn_info_value_label, COLOR_ACCENT_SECONDARY, **subtle_glow_params)
         rmssd_layout, self.rmssd_info_value_label = self._create_info_row("📈 RMSSD:")
+        self._setup_glow_effect(self.rmssd_info_value_label, COLOR_ACCENT_WARN, **subtle_glow_params)
         main_layout.addLayout(sdnn_layout)
         main_layout.addLayout(rmssd_layout)
-
         main_layout.addWidget(self._create_separator())
 
         fps_layout, self.fps_info_value_label = self._create_info_row("🎯 FPS:")
+        self._setup_glow_effect(self.fps_info_value_label, subtle_glow_color, **subtle_glow_params)
         yaw_layout, self.yaw_info_value_label = self._create_info_row("↔️ Yaw:")
+        self._setup_glow_effect(self.yaw_info_value_label, subtle_glow_color, **subtle_glow_params)
         pitch_layout, self.pitch_info_value_label = self._create_info_row("↕️ Pitch:")
+        self._setup_glow_effect(self.pitch_info_value_label, subtle_glow_color, **subtle_glow_params)
         roll_layout, self.roll_info_value_label = self._create_info_row("🔄 Roll:")
+        self._setup_glow_effect(self.roll_info_value_label, subtle_glow_color, **subtle_glow_params)
         main_layout.addLayout(fps_layout)
         main_layout.addLayout(yaw_layout)
         main_layout.addLayout(pitch_layout)
@@ -197,9 +205,13 @@ class AppWindow(QMainWindow):
         main_layout.addWidget(self._create_separator())
 
         blink_layout, self.blink_info_value_label = self._create_info_row("👁️ Blink Rate:")
+        self._setup_glow_effect(self.blink_info_value_label, subtle_glow_color, **subtle_glow_params)
         attention_info_layout, self.attention_info_value_label = self._create_info_row("🧠 Attention:")
+        self._setup_glow_effect(self.attention_info_value_label, subtle_glow_color, **subtle_glow_params)
         gaze_layout, self.gaze_info_value_label = self._create_info_row("👀 Gaze (Z):")
+        self._setup_glow_effect(self.gaze_info_value_label, subtle_glow_color, **subtle_glow_params)
         cognitive_status_layout, self.cognitive_status_info_value_label = self._create_info_row("🧩 Cognitive Status:")
+        self._setup_glow_effect(self.cognitive_status_info_value_label, subtle_glow_color, **subtle_glow_params)
         main_layout.addLayout(blink_layout)
         main_layout.addLayout(attention_info_layout)
         main_layout.addLayout(gaze_layout)
@@ -268,6 +280,32 @@ class AppWindow(QMainWindow):
         self._apply_shadow_effect(status_group_box)
         return status_group_box
 
+    def _setup_glow_effect(self, widget, glow_color_hex, blur_radius=20, duration=800):
+        effect = QGraphicsDropShadowEffect(widget)
+        effect.setOffset(0, 0)
+        effect.setBlurRadius(blur_radius)
+        effect.setColor(QColor(0, 0, 0, 0))
+        widget.setGraphicsEffect(effect)
+
+        animation = QPropertyAnimation(effect, b"color")
+        animation.setDuration(duration)
+        
+        start_color = QColor(glow_color_hex)
+        start_color.setAlpha(150)
+        
+        animation.setStartValue(start_color)
+        animation.setEndValue(QColor(0, 0, 0, 0))
+        animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+        
+        widget.glow_animation = animation
+
+    def _update_label_and_glow(self, label, new_text):
+        new_text_str = str(new_text)
+        if label.text() != new_text_str:
+            label.setText(new_text_str)
+            if hasattr(label, 'glow_animation'):
+                label.glow_animation.stop()
+                label.glow_animation.start()
 
     def start_monitoring(self):
         # Call this to start monitoring
@@ -375,6 +413,14 @@ class AppWindow(QMainWindow):
         value_label.setFont(QFont("Segoe UI", 32, QFont.Weight.Bold))
         value_label.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY};")
         value_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        
+        glow_colors = {
+            "hr": COLOR_ACCENT_ALERT,
+            "br": COLOR_ACCENT_PRIMARY,
+            "stress": COLOR_ACCENT_WARN,
+        }
+        self._setup_glow_effect(value_label, glow_colors.get(key_prefix, COLOR_ACCENT_PRIMARY))
+
         unit_label = QLabel("")
         unit_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Normal))
         unit_label.setStyleSheet(f"color: {COLOR_TEXT_SECONDARY};")
@@ -444,51 +490,50 @@ class AppWindow(QMainWindow):
                     continue
                 
                 current_text = f"{value:.1f}" if isinstance(value, float) else str(value)
-                value_label.setText(current_text)
+                self._update_label_and_glow(value_label, current_text)
                 unit_label.setText(data.get("unit", ""))
+
                 if key == "stress":
                     stress_color = {"Low Intensity": COLOR_ACCENT_SECONDARY, "Medium Intensity": COLOR_ACCENT_WARN, "High Intensity": COLOR_ACCENT_ALERT}.get(current_text, COLOR_TEXT_PRIMARY)
                     value_label.setStyleSheet(f"color: {stress_color};")
                     value_label.setFont(QFont("Segoe UI", 28 if current_text != "N/A" else 32, QFont.Weight.Bold))
 
-
         sdnn_data = metrics_data.get("sdnn")
         if sdnn_data and sdnn_data.get("value") is not None and sdnn_data.get("value") != 0:
-            self.sdnn_info_value_label.setText(f"{sdnn_data.get('value'):.1f} {sdnn_data.get('unit','')}")
+            self._update_label_and_glow(self.sdnn_info_value_label, f"{sdnn_data.get('value'):.1f} {sdnn_data.get('unit','')}")
+        
         rmssd_data = metrics_data.get("rmssd")
         if rmssd_data and rmssd_data.get("value") is not None and rmssd_data.get("value") != 0:
-            self.rmssd_info_value_label.setText(f"{rmssd_data.get('value'):.1f} {rmssd_data.get('unit','')}")
+            self._update_label_and_glow(self.rmssd_info_value_label, f"{rmssd_data.get('value'):.1f} {rmssd_data.get('unit','')}")
 
         if metrics_data.get("fps", {}).get("value") is not None:
-            self.fps_info_value_label.setText(f"{metrics_data['fps']['value']:.1f}")
+            self._update_label_and_glow(self.fps_info_value_label, f"{metrics_data['fps']['value']:.1f}")
         if metrics_data.get("yaw", {}).get("value") is not None:
-            self.yaw_info_value_label.setText(f"{metrics_data['yaw']['value']:.0f}°")
+            self._update_label_and_glow(self.yaw_info_value_label, f"{metrics_data['yaw']['value']:.0f}°")
         if metrics_data.get("pitch", {}).get("value") is not None:
-            self.pitch_info_value_label.setText(f"{metrics_data['pitch']['value']:.0f}°")
+            self._update_label_and_glow(self.pitch_info_value_label, f"{metrics_data['pitch']['value']:.0f}°")
         if metrics_data.get("roll", {}).get("value") is not None:
-            self.roll_info_value_label.setText(f"{metrics_data['roll']['value']:.0f}°")
+            self._update_label_and_glow(self.roll_info_value_label, f"{metrics_data['roll']['value']:.0f}°")
 
         cognitive_data = metrics_data.get("cognitive")
         if cognitive_data:
             blink_rate = cognitive_data.get("blink", {}).get("blink_pm", 0)
-            self.blink_info_value_label.setText(f"{blink_rate:.1f} /min")
+            self._update_label_and_glow(self.blink_info_value_label, f"{blink_rate:.1f} /min")
 
             cog_state = cognitive_data.get("cognitive", {})
-
             attn_level = cog_state.get("attention_level", "N/A")
             attn_score = cog_state.get("attention_score", 0.0)
-            self.attention_info_value_label.setText(f"{attn_level} ({attn_score:.2f})")
+            self._update_label_and_glow(self.attention_info_value_label, f"{attn_level} ({attn_score:.2f})")
 
             details = cog_state.get("details", {})
-            self.gaze_info_value_label.setText(f"{details.get('gaze_z', 0.0):.2f}")
+            self._update_label_and_glow(self.gaze_info_value_label, f"{details.get('gaze_z', 0.0):.2f}")
 
             status = cog_state.get("status", "N/A")
             if status == "establishing_baseline":
                 progress = cog_state.get("progress", 0.0)
-                self.cognitive_status_info_value_label.setText(f"Baseline ({progress:.0%})")
+                self._update_label_and_glow(self.cognitive_status_info_value_label, f"Baseline ({progress:.0%})")
             else:
-                self.cognitive_status_info_value_label.setText(status.replace("_", " ").title())
-
+                self._update_label_and_glow(self.cognitive_status_info_value_label, status.replace("_", " ").title())
 
     @pyqtSlot(str, object, object)
     def update_status(self, status="monitoring", avg_hr=None, avg_br=None):
