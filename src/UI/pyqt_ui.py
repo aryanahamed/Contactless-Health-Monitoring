@@ -121,7 +121,7 @@ class AppWindow(QMainWindow):
         video_layout.addWidget(self.video_display_label)
         self._apply_shadow_effect(video_group_box)
 
-        self.hr_plot_widget = self._create_plot("HR over Time", "HR (bpm)", PLOT_PEN_HR)
+        self.hr_plot_widget = self._create_plot("HR over Time", "HR (bpm)", PLOT_PEN_HR, y_range=(40, 150))
         self.hr_curve = self.hr_plot_widget.getPlotItem().listDataItems()[0]
 
         # HRV legend row
@@ -134,11 +134,11 @@ class AppWindow(QMainWindow):
         hrv_legend_label.setStyleSheet("font-size: 10pt; padding-left: 10px;")
         hrv_title_row.addWidget(hrv_legend_label)
 
-        self.hrv_plot_widget = self._create_plot("", "HRV (ms)")
+        self.hrv_plot_widget = self._create_plot("", "HRV (ms)", y_range=(0, 200))
         self.sdnn_curve = self.hrv_plot_widget.getPlotItem().plot(pen=PLOT_PEN_SDNN)
         self.rmssd_curve = self.hrv_plot_widget.getPlotItem().plot(pen=PLOT_PEN_RMSSD)
 
-        self.br_plot_widget = self._create_plot("BR over Time", "BR (brpm)", PLOT_PEN_BR)
+        self.br_plot_widget = self._create_plot("BR over Time", "BR (brpm)", PLOT_PEN_BR, y_range=(5, 30))
         self.br_curve = self.br_plot_widget.getPlotItem().listDataItems()[0]
 
         right_column_layout.addWidget(video_group_box, stretch=2)
@@ -316,13 +316,17 @@ class AppWindow(QMainWindow):
         setattr(self, f"{key_prefix}_unit_label", unit_label)
         return group_box
 
-    def _create_plot(self, title, ylabel, pen=None):
+    def _create_plot(self, title, ylabel, pen=None, y_range=None):
         plot_widget = PlotWidget(title=title)
         plot_widget.setLabel('left', ylabel)
         plot_widget.setLabel('bottom', "Time (s)")
         plot_widget.showGrid(x=True, y=True, alpha=0.2)
         plot_widget.getAxis('left').setTextPen(COLOR_TEXT_SECONDARY)
         plot_widget.getAxis('bottom').setTextPen(COLOR_TEXT_SECONDARY)
+
+        if y_range:
+            plot_widget.setYRange(y_range[0], y_range[1], padding=0)
+
         if pen: plot_widget.plot(pen=pen)
         self._apply_shadow_effect(plot_widget)
         return plot_widget
@@ -379,7 +383,6 @@ class AppWindow(QMainWindow):
 
     @pyqtSlot(dict)
     def apply_plot_data(self, plot_data):
-        """Lightweight method to apply pre-processed plot data from PlotUpdateWorker"""
         try:
             hr_times, hr_values = plot_data['hr_data']
             br_times, br_values = plot_data['br_data']
@@ -395,7 +398,6 @@ class AppWindow(QMainWindow):
             if hr_times.size > 0:
                 for plot in [self.hr_plot_widget, self.br_plot_widget, self.hrv_plot_widget]:
                     plot.getPlotItem().setXRange(max(0, current_elapsed_time - 30), current_elapsed_time + 1)
-                    plot.getPlotItem().enableAutoRange(axis='y', enable=True)
                     
         except Exception as e:
             print(f"Error applying plot data: {e}")
