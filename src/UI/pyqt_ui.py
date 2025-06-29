@@ -49,7 +49,6 @@ class AppWindow(QMainWindow):
         self.start_time = None
         self.logic_function = logic_function
 
-        # Change styles here to change how the app looks
         self.setStyleSheet(f"""
             QMainWindow {{ background-color: {COLOR_BACKGROUND}; font-family: "Segoe UI", Arial, sans-serif; }}
             QLabel {{ color: {COLOR_TEXT_SECONDARY}; background-color: transparent; }}
@@ -87,8 +86,6 @@ class AppWindow(QMainWindow):
         icon_hr = qta.icon('fa5s.heartbeat', color=COLOR_ACCENT_ALERT)
         icon_br = qta.icon('fa5s.wind', color=COLOR_ACCENT_PRIMARY)
         icon_stress = qta.icon('fa5s.bolt', color=COLOR_ACCENT_WARN)
-        icon_sdnn = qta.icon('fa5s.chart-line', color=COLOR_ACCENT_SECONDARY)
-        icon_rmssd = qta.icon('fa5s.wave-square', color=COLOR_ACCENT_WARN)
         self.icon_status_ok = qta.icon('fa5s.check-circle', color=COLOR_ACCENT_SECONDARY)
         self.icon_status_warn = qta.icon('fa5s.exclamation-triangle', color=COLOR_ACCENT_WARN)
         self.icon_status_search = qta.icon('fa5s.sync-alt', color=COLOR_ACCENT_PRIMARY, animation=qta.Spin(self))
@@ -97,11 +94,12 @@ class AppWindow(QMainWindow):
         self.hr_group = self._create_metrics_group("Heart Rate (HR)", "hr", icon_hr)
         self.br_group = self._create_metrics_group("Breathing Rate (BR)", "br", icon_br)
         self.stress_group = self._create_metrics_group("Stress Level", "stress", icon_stress)
-        self.sdnn_group = self._create_metrics_group("SDNN", "sdnn", icon_sdnn)
-        self.rmssd_group = self._create_metrics_group("RMSSD", "rmssd", icon_rmssd)
+        self.info_panel = self._create_info_panel()
 
-        for group in [self.hr_group, self.br_group, self.stress_group, self.sdnn_group, self.rmssd_group]:
-            left_column_layout.addWidget(group)
+        left_column_layout.addWidget(self.hr_group)
+        left_column_layout.addWidget(self.br_group)
+        left_column_layout.addWidget(self.stress_group)
+        left_column_layout.addWidget(self.info_panel)
 
         self.status_panel = self._create_status_panel()
         left_column_layout.addWidget(self.status_panel)
@@ -145,6 +143,41 @@ class AppWindow(QMainWindow):
 
         self.main_layout.addWidget(left_column_widget, stretch=1)
         self.main_layout.addWidget(right_column_widget, stretch=2)
+
+    def _create_info_row(self, label_text):
+        row_layout = QHBoxLayout()
+        label = QLabel(label_text)
+        label.setFont(QFont("Segoe UI", 10))
+        label.setStyleSheet(f"color: {COLOR_TEXT_SECONDARY};")
+
+        value_label = QLabel("N/A")
+        value_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        value_label.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY};")
+        value_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+
+        row_layout.addWidget(label)
+        row_layout.addWidget(value_label)
+        return row_layout, value_label
+
+    def _create_info_panel(self):
+        info_group_box = QGroupBox()
+        main_layout = QVBoxLayout(info_group_box)
+        main_layout.setContentsMargins(15, 10, 15, 15)
+        main_layout.setSpacing(8)
+
+        title_label = QLabel("Info Panel")
+        title_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        title_label.setStyleSheet(f"color: {COLOR_ACCENT_PRIMARY};")
+        main_layout.addWidget(title_label)
+
+        sdnn_layout, self.sdnn_info_value_label = self._create_info_row("SDNN:")
+        rmssd_layout, self.rmssd_info_value_label = self._create_info_row("RMSSD:")
+
+        main_layout.addLayout(sdnn_layout)
+        main_layout.addLayout(rmssd_layout)
+        
+        self._apply_shadow_effect(info_group_box)
+        return info_group_box
 
     def _create_status_panel(self):
         status_group_box = QGroupBox()
@@ -266,9 +299,16 @@ class AppWindow(QMainWindow):
         self.video_display_label.setPixmap(QPixmap())
 
     def _reset_ui_values(self):
-        # Change these to set default values for metrics
-        default_metrics = { "hr": {"value": "N/A", "unit": "bpm"}, "br": {"value": "N/A", "unit": "brpm"}, "sdnn": {"value": "N/A", "unit": "ms"}, "rmssd": {"value": "N/A", "unit": "ms"}, "stress": {"value": "N/A", "unit": ""}}
+        default_metrics = {
+            "hr": {"value": "N/A", "unit": "bpm"},
+            "br": {"value": "N/A", "unit": "brpm"},
+            "stress": {"value": "N/A", "unit": ""}
+        }
         self.update_metrics(default_metrics)
+        
+        self.sdnn_info_value_label.setText("N/A")
+        self.rmssd_info_value_label.setText("N/A")
+        
         self.stress_value_label.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY};")
         self.stress_value_label.setFont(QFont("Segoe UI", 32, QFont.Weight.Bold))
         self.avg_hr_label.setText("N/A")
@@ -348,28 +388,41 @@ class AppWindow(QMainWindow):
         br_val = data_point.get("br", {}).get("value")
         self.update_status("monitoring", avg_hr=hr_val, avg_br=br_val)
         
-        # Set start time for UI reference
         timestamp = data_point.get("timestamp")
         if timestamp is not None and self.start_time is None:
             self.start_time = timestamp
         
-
     @pyqtSlot(dict)
     def update_metrics(self, metrics_data):
-        metric_map = {"hr": (self.hr_value_label, self.hr_unit_label), "br": (self.br_value_label, self.br_unit_label), "sdnn": (self.sdnn_value_label, self.sdnn_unit_label), "rmssd": (self.rmssd_value_label, self.rmssd_unit_label), "stress": (self.stress_value_label, self.stress_unit_label)}
+        metric_map = {
+            "hr": (self.hr_value_label, self.hr_unit_label),
+            "br": (self.br_value_label, self.br_unit_label),
+            "stress": (self.stress_value_label, self.stress_unit_label),
+            "sdnn": (self.sdnn_info_value_label, None),
+            "rmssd": (self.rmssd_info_value_label, None)
+        }
+        
         for key, data in metrics_data.items():
             if key in metric_map:
                 value_label, unit_label = metric_map[key]
                 value = data.get("value")
+                
                 if value is None or (isinstance(value, (int, float)) and value == 0):
                     continue
-                current_text = f"{value:.1f}" if isinstance(value, float) else str(value)
-                value_label.setText(current_text)
-                unit_label.setText(data.get("unit", ""))
-                if key == "stress":
-                    stress_color = {"Low Intensity": COLOR_ACCENT_SECONDARY, "Medium Intensity": COLOR_ACCENT_WARN, "High Intensity": COLOR_ACCENT_ALERT}.get(current_text, COLOR_TEXT_PRIMARY)
-                    value_label.setStyleSheet(f"color: {stress_color};")
-                    value_label.setFont(QFont("Segoe UI", 28 if current_text != "N/A" else 32, QFont.Weight.Bold))
+                
+                if unit_label is not None:
+                    current_text = f"{value:.1f}" if isinstance(value, float) else str(value)
+                    value_label.setText(current_text)
+                    unit_label.setText(data.get("unit", ""))
+                    if key == "stress":
+                        stress_color = {"Low Intensity": COLOR_ACCENT_SECONDARY, "Medium Intensity": COLOR_ACCENT_WARN, "High Intensity": COLOR_ACCENT_ALERT}.get(current_text, COLOR_TEXT_PRIMARY)
+                        value_label.setStyleSheet(f"color: {stress_color};")
+                        value_label.setFont(QFont("Segoe UI", 28 if current_text != "N/A" else 32, QFont.Weight.Bold))
+                else:
+                    unit = data.get("unit", "")
+                    formatted_text = f"{value:.1f} {unit}" if isinstance(value, float) else f"{value} {unit}"
+                    value_label.setText(formatted_text.strip())
+
 
     @pyqtSlot(str, object, object)
     def update_status(self, status="monitoring", avg_hr=None, avg_br=None):
