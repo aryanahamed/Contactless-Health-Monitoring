@@ -69,6 +69,7 @@ def main_logic(emit_frame, emit_metrics, should_stop):
                         "rmssd": {"value": last_rmssd, "unit": "ms"},
                         "stress": {"value": None, "unit": ""}
                     }
+                    print(f"SDNN: {last_sdnn}, RMSSD: {last_rmssd}")
                     predicted_stress = None
                     if rf_model_loaded and all(v is not None for v in [last_hr, last_sdnn, last_rmssd]):
                         predicted_stress, _ = stress_detection.predict_stress(

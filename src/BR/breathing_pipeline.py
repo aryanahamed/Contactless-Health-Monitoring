@@ -10,9 +10,8 @@ def process_breathing(best_signal, best_ts, fps, quality):
         fs = fps
         window_center_time = np.mean(best_ts)
 
-        rppg_signal_1d = best_signal
-        br_signal, br_ts = extract_breathing_signal(rppg_signal_1d, best_ts, fs)
-        
+        br_signal, br_ts = extract_breathing_signal(best_signal, best_ts, fs)
+
         if br_signal is not None and br_ts is not None:
             raw_br = calculate_breathing_rate_welch(br_signal, br_ts)
             smoothed_br = smooth_br_multi_stage(raw_br, timestamp=window_center_time, quality_score=quality)

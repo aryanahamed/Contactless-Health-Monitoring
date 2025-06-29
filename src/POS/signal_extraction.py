@@ -111,6 +111,7 @@ def find_signal_peaks(filtered_signal, target_fps, expected_hr_bpm=None):
 
 @njit(cache=True)
 def _calculate_hrv_core(ibis_sec_final):
+    HRV_VALUE_TOLERANCE = 1e-9
     mean_ibi_sec = np.mean(ibis_sec_final)
     sdnn_ms = np.std(ibis_sec_final) * 1000.0
     if ibis_sec_final.size >= 2:
@@ -119,6 +120,13 @@ def _calculate_hrv_core(ibis_sec_final):
         rmssd_ms = np.sqrt(np.mean(diffs_ibi)) * 1000.0
     else:
         rmssd_ms = np.nan
+        
+    if sdnn_ms < HRV_VALUE_TOLERANCE:
+        sdnn_ms = 0.0
+        
+    if not np.isnan(rmssd_ms) and rmssd_ms < HRV_VALUE_TOLERANCE:
+        rmssd_ms = 0.0
+    
     return mean_ibi_sec, sdnn_ms, rmssd_ms
 
 def calculate_hrv(peak_timestamps):
@@ -152,13 +160,13 @@ def calculate_hrv(peak_timestamps):
     mean_ibi_sec, sdnn_ms, rmssd_ms = _calculate_hrv_core(ibis_sec_final)
 
     if mean_ibi_sec == 0:
-        return {'sdnn': np.nan, 'rmssd': np.nan, 'hrv_quality': 'error_zero_mean_ibi'}
+        return {'sdnn': None, 'rmssd': None, 'hrv_quality': 'error_zero_mean_ibi'}
 
     if sdnn_ms > MAX_ACCEPTABLE_SDNN_MS:
-        return {'sdnn': np.nan, 'rmssd': np.nan, 'hrv_quality': 'unstable_sdnn'}
+        return {'sdnn': None, 'rmssd': None, 'hrv_quality': 'unstable_sdnn'}
 
     if not np.isnan(rmssd_ms) and rmssd_ms > MAX_ACCEPTABLE_RMSSD_MS:
-        return {'sdnn': sdnn_ms, 'rmssd': np.nan, 'hrv_quality': 'unstable_rmssd'}
+        return {'sdnn': sdnn_ms, 'rmssd': None, 'hrv_quality': 'unstable_rmssd'}
 
     return {'sdnn': sdnn_ms, 'rmssd': rmssd_ms, 'hrv_quality': 'ok'}
 
