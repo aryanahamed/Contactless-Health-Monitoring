@@ -65,15 +65,15 @@ class PlotUpdateWorker(QThread):
             rmssd_val = data_point.get("rmssd", {}).get("value")
             if rmssd_val is not None and rmssd_val != 0:
                 self.rmssd_history.append((timestamp, rmssd_val))
-
-            plot_data = self._process_plot_arrays()
+            
+            plot_data = self._process_plot_arrays(data_point)
             
             self.plot_data_ready.emit(plot_data)
             
         except Exception as e:
             print(f"PlotUpdateWorker error: {e}")
 
-    def _process_plot_arrays(self):
+    def _process_plot_arrays(self, data_point):
         def get_plot_arrays(data_list):
             if not data_list:
                 return np.array([]), np.array([])
@@ -81,6 +81,13 @@ class PlotUpdateWorker(QThread):
             times = np.array([item[0] for item in data_list]) - self.start_time
             values = np.array([item[1] for item in data_list])
             return times, values
+        
+        rppg_signal_data = data_point.get("rppg_signal")
+        rppg_times, rppg_values = (np.array([]), np.array([]))
+        if rppg_signal_data and rppg_signal_data.get("timestamps") is not None:
+            if rppg_signal_data["timestamps"] is not None and rppg_signal_data["values"] is not None:
+                rppg_times = np.array(rppg_signal_data["timestamps"]) - self.start_time
+                rppg_values = np.array(rppg_signal_data["values"])
 
         hr_times, hr_values = get_plot_arrays(self.hr_history)
         br_times, br_values = get_plot_arrays(self.br_history)
@@ -90,6 +97,7 @@ class PlotUpdateWorker(QThread):
         current_elapsed_time = hr_times[-1] if hr_times.size > 0 else 0
         
         return {
+            'rppg_signal_data': (rppg_times, rppg_values),
             'hr_data': (hr_times, hr_values),
             'br_data': (br_times, br_values),
             'sdnn_data': (sdnn_times, sdnn_values),

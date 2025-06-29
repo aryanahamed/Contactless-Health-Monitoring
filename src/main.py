@@ -67,7 +67,8 @@ def main_logic(emit_frame, emit_metrics, should_stop):
                         "br": {"value": last_br, "unit": "brpm"},
                         "sdnn": {"value": last_sdnn, "unit": "ms"},
                         "rmssd": {"value": last_rmssd, "unit": "ms"},
-                        "stress": {"value": None, "unit": ""}
+                        "stress": {"value": None, "unit": ""},
+                        "rppg_signal": {"timestamps": best_ts, "values": best_filt}
                     }
                     predicted_stress = None
                     if rf_model_loaded and all(v is not None for v in [last_hr, last_sdnn, last_rmssd]):

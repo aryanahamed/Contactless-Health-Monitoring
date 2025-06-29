@@ -26,6 +26,7 @@ COLOR_SHADOW = "#1e2128"
 
 # Plotting colors
 # Change these to modify plot line colors
+PLOT_PEN_SIGNAL = pg.mkPen('#3498db', width=2)
 PLOT_PEN_HR = pg.mkPen(COLOR_ACCENT_ALERT, width=2)
 PLOT_PEN_BR = pg.mkPen(COLOR_ACCENT_PRIMARY, width=2)
 PLOT_PEN_SDNN = pg.mkPen(COLOR_ACCENT_SECONDARY, width=2)
@@ -121,6 +122,10 @@ class AppWindow(QMainWindow):
         video_layout.addWidget(self.video_display_label)
         self._apply_shadow_effect(video_group_box)
 
+        self.rppg_plot_widget = self._create_plot("rPPG Signal", "Amplitude")
+        self.rppg_signal_curve = self.rppg_plot_widget.getPlotItem().plot(pen=PLOT_PEN_SIGNAL)
+        self.rppg_plot_widget.getPlotItem().getAxis('left').setWidth(50) # Give it some space
+
         self.hr_plot_widget = self._create_plot("HR over Time", "HR (bpm)", PLOT_PEN_HR, y_range=(40, 150))
         self.hr_curve = self.hr_plot_widget.getPlotItem().listDataItems()[0]
 
@@ -142,6 +147,7 @@ class AppWindow(QMainWindow):
         self.br_curve = self.br_plot_widget.getPlotItem().listDataItems()[0]
 
         right_column_layout.addWidget(video_group_box, stretch=2)
+        right_column_layout.addWidget(self.rppg_plot_widget, stretch=1)
         right_column_layout.addWidget(self.hr_plot_widget, stretch=1)
         right_column_layout.addLayout(hrv_title_row)
         right_column_layout.addWidget(self.hrv_plot_widget, stretch=1)
@@ -259,6 +265,7 @@ class AppWindow(QMainWindow):
             self.plot_worker.reset_data()
         
         # Clear plot curves
+        self.rppg_signal_curve.setData([], [])
         self.hr_curve.setData([], [])
         self.br_curve.setData([], [])
         self.sdnn_curve.setData([], [])
@@ -323,6 +330,7 @@ class AppWindow(QMainWindow):
         plot_widget.showGrid(x=True, y=True, alpha=0.2)
         plot_widget.getAxis('left').setTextPen(COLOR_TEXT_SECONDARY)
         plot_widget.getAxis('bottom').setTextPen(COLOR_TEXT_SECONDARY)
+        plot_widget.getAxis('left').setWidth(50)
 
         if y_range:
             plot_widget.setYRange(y_range[0], y_range[1], padding=0)
@@ -386,11 +394,16 @@ class AppWindow(QMainWindow):
     @pyqtSlot(dict)
     def apply_plot_data(self, plot_data):
         try:
+            rppg_times, rppg_values = plot_data.get('rppg_signal_data', (np.array([]), np.array([])))
             hr_times, hr_values = plot_data['hr_data']
             br_times, br_values = plot_data['br_data']
             sdnn_times, sdnn_values = plot_data['sdnn_data']
             rmssd_times, rmssd_values = plot_data['rmssd_data']
             current_elapsed_time = plot_data['current_time']
+
+            self.rppg_signal_curve.setData(rppg_times, rppg_values)
+            if rppg_times.size > 1:
+                self.rppg_plot_widget.setXRange(rppg_times[0], rppg_times[-1])
             
             self.hr_curve.setData(hr_times, hr_values)
             self.br_curve.setData(br_times, br_values)
