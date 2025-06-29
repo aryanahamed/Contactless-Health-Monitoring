@@ -10,8 +10,8 @@ from pyqtgraph import PlotWidget
 import qtawesome as qta
 
 
-from UI.ui_worker import ProcessingWorker, PlotUpdateWorker
-# from ui_worker import ProcessingWorker, PlotUpdateWorker
+# from UI.ui_worker import ProcessingWorker, PlotUpdateWorker
+from ui_worker import ProcessingWorker, PlotUpdateWorker
 
 # Change these colors to change the app's look
 COLOR_BACKGROUND = "#1F2227"
@@ -26,7 +26,7 @@ COLOR_SHADOW = "#181a1f"
 
 # Plotting colors
 # Change these to modify plot line colors
-PLOT_PEN_SIGNAL = pg.mkPen('#3498db', width=2)
+PLOT_PEN_SIGNAL = pg.mkPen("#378ac2", width=2)
 PLOT_PEN_HR = pg.mkPen(COLOR_ACCENT_ALERT, width=2)
 PLOT_PEN_BR = pg.mkPen(COLOR_ACCENT_PRIMARY, width=2)
 PLOT_PEN_SDNN = pg.mkPen(COLOR_ACCENT_SECONDARY, width=2)
@@ -50,7 +50,7 @@ class AppWindow(QMainWindow):
         self.logic_function = logic_function
 
         self.setStyleSheet(f"""
-            QMainWindow {{ background-color: {COLOR_BACKGROUND}; font-family: "Segoe UI", Arial, sans-serif; }}
+            QMainWindow {{ background-color: {COLOR_BACKGROUND}; font-family: "Roboto", Arial, sans-serif; }}
             QLabel {{ color: {COLOR_TEXT_SECONDARY}; background-color: transparent; }}
             QGroupBox {{ background-color: {COLOR_CONTENT_BACKGROUND}; border: none; border-radius: 8px; }}
             PlotWidget {{ border-radius: 8px; }}
@@ -178,17 +178,17 @@ class AppWindow(QMainWindow):
         main_layout.addWidget(title_label)
         main_layout.addSpacing(5)
 
-        sdnn_layout, self.sdnn_info_value_label = self._create_info_row("SDNN:")
-        rmssd_layout, self.rmssd_info_value_label = self._create_info_row("RMSSD:")
+        sdnn_layout, self.sdnn_info_value_label = self._create_info_row("💓 SDNN:")
+        rmssd_layout, self.rmssd_info_value_label = self._create_info_row("📈 RMSSD:")
         main_layout.addLayout(sdnn_layout)
         main_layout.addLayout(rmssd_layout)
 
         main_layout.addWidget(self._create_separator())
 
-        fps_layout, self.fps_info_value_label = self._create_info_row("FPS:")
-        yaw_layout, self.yaw_info_value_label = self._create_info_row("Yaw:")
-        pitch_layout, self.pitch_info_value_label = self._create_info_row("Pitch:")
-        roll_layout, self.roll_info_value_label = self._create_info_row("Roll:")
+        fps_layout, self.fps_info_value_label = self._create_info_row("🎯 FPS:")
+        yaw_layout, self.yaw_info_value_label = self._create_info_row("↔️ Yaw:")
+        pitch_layout, self.pitch_info_value_label = self._create_info_row("↕️ Pitch:")
+        roll_layout, self.roll_info_value_label = self._create_info_row("🔄 Roll:")
         main_layout.addLayout(fps_layout)
         main_layout.addLayout(yaw_layout)
         main_layout.addLayout(pitch_layout)
@@ -196,10 +196,10 @@ class AppWindow(QMainWindow):
         
         main_layout.addWidget(self._create_separator())
 
-        blink_layout, self.blink_info_value_label = self._create_info_row("Blink Rate:")
-        attention_info_layout, self.attention_info_value_label = self._create_info_row("Attention:")
-        gaze_layout, self.gaze_info_value_label = self._create_info_row("Gaze (Z):")
-        cognitive_status_layout, self.cognitive_status_info_value_label = self._create_info_row("Cognitive Status:")
+        blink_layout, self.blink_info_value_label = self._create_info_row("👁️ Blink Rate:")
+        attention_info_layout, self.attention_info_value_label = self._create_info_row("🧠 Attention:")
+        gaze_layout, self.gaze_info_value_label = self._create_info_row("👀 Gaze (Z):")
+        cognitive_status_layout, self.cognitive_status_info_value_label = self._create_info_row("🧩 Cognitive Status:")
         main_layout.addLayout(blink_layout)
         main_layout.addLayout(attention_info_layout)
         main_layout.addLayout(gaze_layout)
