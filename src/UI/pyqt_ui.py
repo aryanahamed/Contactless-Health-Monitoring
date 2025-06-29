@@ -126,15 +126,15 @@ class AppWindow(QMainWindow):
 
         # HRV legend row
         hrv_title_row = QHBoxLayout()
-        hrv_title_label = QLabel("HRV (SDNN & RMSSD)")
-        hrv_title_label.setStyleSheet(f"color: {COLOR_TEXT_SECONDARY}; font-size: 11pt; font-weight: bold;")
-        hrv_title_row.addWidget(hrv_title_label)
+        # hrv_title_label = QLabel("HRV (SDNN & RMSSD)")
+        # hrv_title_label.setStyleSheet(f"color: {COLOR_TEXT_SECONDARY}; font-size: 11pt; font-weight: bold;")
+        # hrv_title_row.addWidget(hrv_title_label)
         hrv_title_row.addStretch()
         hrv_legend_label = QLabel("🟡 SDNN   🟢 RMSSD")
         hrv_legend_label.setStyleSheet("font-size: 10pt; padding-left: 10px;")
         hrv_title_row.addWidget(hrv_legend_label)
 
-        self.hrv_plot_widget = self._create_plot("", "HRV (ms)", y_range=(0, 200))
+        self.hrv_plot_widget = self._create_plot("HRV over Time", "HRV (ms)", y_range=(0, 200))
         self.sdnn_curve = self.hrv_plot_widget.getPlotItem().plot(pen=PLOT_PEN_SDNN)
         self.rmssd_curve = self.hrv_plot_widget.getPlotItem().plot(pen=PLOT_PEN_RMSSD)
 
