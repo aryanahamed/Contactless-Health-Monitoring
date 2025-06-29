@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import time
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout,
-                             QHBoxLayout, QGridLayout, QGroupBox, QSizePolicy, QGraphicsDropShadowEffect, QPushButton)
+                             QHBoxLayout, QGridLayout, QGroupBox, QSizePolicy, QGraphicsDropShadowEffect, QPushButton, QFrame)
 from PyQt6.QtGui import QPixmap, QImage, QFont, QColor
 from PyQt6.QtCore import Qt, pyqtSlot
 import pyqtgraph as pg
@@ -14,15 +14,15 @@ from UI.ui_worker import ProcessingWorker, PlotUpdateWorker
 # from ui_worker import ProcessingWorker, PlotUpdateWorker
 
 # Change these colors to change the app's look
-COLOR_BACKGROUND = "#252931"
-COLOR_CONTENT_BACKGROUND = "#24272e"
+COLOR_BACKGROUND = "#1F2227"
+COLOR_CONTENT_BACKGROUND = "#1e1f24"
 COLOR_TEXT_PRIMARY = "#f5f6fa"
 COLOR_TEXT_SECONDARY = "#dcdde1"
 COLOR_ACCENT_PRIMARY = "#00a8ff"
 COLOR_ACCENT_SECONDARY = "#4cd137"
 COLOR_ACCENT_WARN = "#fbc531"
 COLOR_ACCENT_ALERT = "#e84118"
-COLOR_SHADOW = "#1e2128"
+COLOR_SHADOW = "#181a1f"
 
 # Plotting colors
 # Change these to modify plot line colors
@@ -159,6 +159,13 @@ class AppWindow(QMainWindow):
         row_layout.addWidget(value_label)
         return row_layout, value_label
 
+    def _create_separator(self):
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
+        separator.setStyleSheet(f"border: 1px solid {COLOR_SHADOW};")
+        return separator
+
     def _create_info_panel(self):
         info_group_box = QGroupBox()
         main_layout = QVBoxLayout(info_group_box)
@@ -173,27 +180,31 @@ class AppWindow(QMainWindow):
 
         sdnn_layout, self.sdnn_info_value_label = self._create_info_row("SDNN:")
         rmssd_layout, self.rmssd_info_value_label = self._create_info_row("RMSSD:")
+        main_layout.addLayout(sdnn_layout)
+        main_layout.addLayout(rmssd_layout)
+
+        main_layout.addWidget(self._create_separator())
+
         fps_layout, self.fps_info_value_label = self._create_info_row("FPS:")
         yaw_layout, self.yaw_info_value_label = self._create_info_row("Yaw:")
         pitch_layout, self.pitch_info_value_label = self._create_info_row("Pitch:")
         roll_layout, self.roll_info_value_label = self._create_info_row("Roll:")
-        blink_layout, self.blink_info_value_label = self._create_info_row("Blink Rate:")
-        attention_info_layout, self.attention_info_value_label = self._create_info_row("Attention:")
-        gaze_layout, self.gaze_info_value_label = self._create_info_row("Gaze (Z):")
-        cognitive_status_layout, self.cognitive_status_info_value_label = self._create_info_row("Cognitive Status:")
-
-        main_layout.addLayout(sdnn_layout)
-        main_layout.addLayout(rmssd_layout)
-        main_layout.addSpacing(5)
         main_layout.addLayout(fps_layout)
         main_layout.addLayout(yaw_layout)
         main_layout.addLayout(pitch_layout)
         main_layout.addLayout(roll_layout)
-        main_layout.addSpacing(5)
+        
+        main_layout.addWidget(self._create_separator())
+
+        blink_layout, self.blink_info_value_label = self._create_info_row("Blink Rate:")
+        attention_info_layout, self.attention_info_value_label = self._create_info_row("Attention:")
+        gaze_layout, self.gaze_info_value_label = self._create_info_row("Gaze (Z):")
+        cognitive_status_layout, self.cognitive_status_info_value_label = self._create_info_row("Cognitive Status:")
         main_layout.addLayout(blink_layout)
         main_layout.addLayout(attention_info_layout)
         main_layout.addLayout(gaze_layout)
         main_layout.addLayout(cognitive_status_layout)
+        
         self._apply_shadow_effect(info_group_box)
         return info_group_box
 
