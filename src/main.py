@@ -22,7 +22,7 @@ def main_logic(emit_frame, emit_metrics, should_stop):
     capture.start()
     frame_count = 0
     fps_window = deque(maxlen=30)  # last 30 timestamps
-    DETECTION_INTERVAL = 2  # every 2 frames
+    DETECTION_INTERVAL = 1
     last_hr = None
     hr_data = []
     br_data = []
@@ -39,7 +39,6 @@ def main_logic(emit_frame, emit_metrics, should_stop):
             if frame is None:
                 if not capture.running.is_set() and not should_stop():
                     break
-                time.sleep(0.01)
                 continue
             fps_window.append(timestamp)
 
@@ -93,7 +92,6 @@ def main_logic(emit_frame, emit_metrics, should_stop):
                         last_emission_time = current_time
 
             frame_count += 1
-            time.sleep(0.01)
 
     except Exception as e:
         print(f"An error occurred, {e}")

@@ -38,7 +38,7 @@ def reject_outliers(new_bpm, quality_score):
         return None
     
     is_establishing_baseline = len(_bpm_history) == 0
-    required_quality = 4.0 if is_establishing_baseline else MIN_QUALITY_THRESHOLD
+    required_quality = 4.5 if is_establishing_baseline else MIN_QUALITY_THRESHOLD
 
     if quality_score < required_quality:
         return None
