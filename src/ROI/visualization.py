@@ -28,8 +28,6 @@ def draw(frame, roi):
             for pt in points:
                 cv2.circle(frame, tuple(pt), 1, (0, 255, 0), -1)
 
-    # Combined text drawing
-    draw_all_text(frame, thetas, fps_actual, blink)
     return frame
 
 
@@ -38,58 +36,6 @@ def draw_face_tesselation(frame, landmarks, connections):
     lines = np.array([[landmarks_int[c.start], landmarks_int[c.end]] for c in connections])
     cv2.polylines(frame, lines, False, (128, 128, 128), 1)
 
-
-def draw_all_text(frame, thetas, fps_actual, cognitive_data):
-    line_height = 25
-
-    # Build text array starting with existing metrics
-    texts = [
-        f"FPS: {fps_actual:.1f}",
-        f"Yaw: {int(thetas[0])}",
-        f"Pitch: {int(thetas[1])}",
-        f"Roll: {int(thetas[2])}"
-    ]
-
-    # Add cognitive metrics if available
-    if cognitive_data:
-        blink_data = cognitive_data.get("blink", {})
-        cognitive_state = cognitive_data.get("cognitive", {})
-
-        # Blink metrics
-        blink_count = blink_data.get("blink_count", 0)
-        blink_rate = blink_data.get("blink_pm", 0)
-        texts.append(f"Blinks: {blink_count} ({blink_rate:.1f}/min)")
-
-        # Stress and attention
-        stress_level = cognitive_state.get("stress_level", "-")
-        stress_score = cognitive_state.get("stress_score", 0)
-        texts.append(f"Stress: {stress_level} ({stress_score:.2f})")
-
-        attention_level = cognitive_state.get("attention_level", "-")
-        attention_score = cognitive_state.get("attention_score", 0)
-        texts.append(f"Attention: {attention_level} ({attention_score:.2f})")
-
-        # Z-scores from details
-        details = cognitive_state.get("details", {})
-        gaze_z = details.get("gaze_z", 0)
-        eye_opening_z = details.get("eye_opening_z", 0)
-        eye_strain_z = details.get("eye_strain_z", 0)
-        texts.append(f"Gaze: {gaze_z:.2f}")
-        texts.append(f"Eye Opening: {eye_opening_z:.2f}")
-        texts.append(f"Eye Strain: {eye_strain_z:.2f}")
-
-        # Status (with progress only during baseline)
-        status = cognitive_state.get("status", "-")
-        progress = cognitive_state.get("progress", 0)
-        if status == "establishing_baseline":
-            texts.append(f"Status: ({progress:.0f}%)")
-        else:
-            texts.append(f"Status: {status}")
-
-    # Draw all text
-    for i, text in enumerate(texts):
-        y_pos = 25 + i * line_height
-        cv2.putText(frame, text, (10, y_pos), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
 
 
 
@@ -100,6 +46,3 @@ def show(frame,scale):
         new_h = int(h * scale)
         frame = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
     cv2.imshow('ROI', frame)
-
-
-

@@ -169,13 +169,31 @@ class AppWindow(QMainWindow):
         title_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
         title_label.setStyleSheet(f"color: {COLOR_ACCENT_PRIMARY};")
         main_layout.addWidget(title_label)
+        main_layout.addSpacing(5)
 
         sdnn_layout, self.sdnn_info_value_label = self._create_info_row("SDNN:")
         rmssd_layout, self.rmssd_info_value_label = self._create_info_row("RMSSD:")
+        fps_layout, self.fps_info_value_label = self._create_info_row("FPS:")
+        yaw_layout, self.yaw_info_value_label = self._create_info_row("Yaw:")
+        pitch_layout, self.pitch_info_value_label = self._create_info_row("Pitch:")
+        roll_layout, self.roll_info_value_label = self._create_info_row("Roll:")
+        blink_layout, self.blink_info_value_label = self._create_info_row("Blink Rate:")
+        attention_info_layout, self.attention_info_value_label = self._create_info_row("Attention:")
+        gaze_layout, self.gaze_info_value_label = self._create_info_row("Gaze (Z):")
+        cognitive_status_layout, self.cognitive_status_info_value_label = self._create_info_row("Cognitive Status:")
 
         main_layout.addLayout(sdnn_layout)
         main_layout.addLayout(rmssd_layout)
-        
+        main_layout.addSpacing(5)
+        main_layout.addLayout(fps_layout)
+        main_layout.addLayout(yaw_layout)
+        main_layout.addLayout(pitch_layout)
+        main_layout.addLayout(roll_layout)
+        main_layout.addSpacing(5)
+        main_layout.addLayout(blink_layout)
+        main_layout.addLayout(attention_info_layout)
+        main_layout.addLayout(gaze_layout)
+        main_layout.addLayout(cognitive_status_layout)
         self._apply_shadow_effect(info_group_box)
         return info_group_box
 
@@ -308,7 +326,15 @@ class AppWindow(QMainWindow):
         
         self.sdnn_info_value_label.setText("N/A")
         self.rmssd_info_value_label.setText("N/A")
-        
+        self.fps_info_value_label.setText("N/A")
+        self.yaw_info_value_label.setText("N/A")
+        self.pitch_info_value_label.setText("N/A")
+        self.roll_info_value_label.setText("N/A")
+        self.blink_info_value_label.setText("N/A")
+        self.attention_info_value_label.setText("N/A")
+        self.gaze_info_value_label.setText("N/A")
+        self.cognitive_status_info_value_label.setText("N/A")
+
         self.stress_value_label.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY};")
         self.stress_value_label.setFont(QFont("Segoe UI", 32, QFont.Weight.Bold))
         self.avg_hr_label.setText("N/A")
@@ -398,30 +424,59 @@ class AppWindow(QMainWindow):
             "hr": (self.hr_value_label, self.hr_unit_label),
             "br": (self.br_value_label, self.br_unit_label),
             "stress": (self.stress_value_label, self.stress_unit_label),
-            "sdnn": (self.sdnn_info_value_label, None),
-            "rmssd": (self.rmssd_info_value_label, None)
         }
-        
         for key, data in metrics_data.items():
             if key in metric_map:
                 value_label, unit_label = metric_map[key]
                 value = data.get("value")
-                
-                if value is None or (isinstance(value, (int, float)) and value == 0):
+                if value is None or (isinstance(value, (int, float)) and value == 0 and key != 'stress'):
                     continue
                 
-                if unit_label is not None:
-                    current_text = f"{value:.1f}" if isinstance(value, float) else str(value)
-                    value_label.setText(current_text)
-                    unit_label.setText(data.get("unit", ""))
-                    if key == "stress":
-                        stress_color = {"Low Intensity": COLOR_ACCENT_SECONDARY, "Medium Intensity": COLOR_ACCENT_WARN, "High Intensity": COLOR_ACCENT_ALERT}.get(current_text, COLOR_TEXT_PRIMARY)
-                        value_label.setStyleSheet(f"color: {stress_color};")
-                        value_label.setFont(QFont("Segoe UI", 28 if current_text != "N/A" else 32, QFont.Weight.Bold))
-                else:
-                    unit = data.get("unit", "")
-                    formatted_text = f"{value:.1f} {unit}" if isinstance(value, float) else f"{value} {unit}"
-                    value_label.setText(formatted_text.strip())
+                current_text = f"{value:.1f}" if isinstance(value, float) else str(value)
+                value_label.setText(current_text)
+                unit_label.setText(data.get("unit", ""))
+                if key == "stress":
+                    stress_color = {"Low Intensity": COLOR_ACCENT_SECONDARY, "Medium Intensity": COLOR_ACCENT_WARN, "High Intensity": COLOR_ACCENT_ALERT}.get(current_text, COLOR_TEXT_PRIMARY)
+                    value_label.setStyleSheet(f"color: {stress_color};")
+                    value_label.setFont(QFont("Segoe UI", 28 if current_text != "N/A" else 32, QFont.Weight.Bold))
+
+
+        sdnn_data = metrics_data.get("sdnn")
+        if sdnn_data and sdnn_data.get("value") is not None and sdnn_data.get("value") != 0:
+            self.sdnn_info_value_label.setText(f"{sdnn_data.get('value'):.1f} {sdnn_data.get('unit','')}")
+        rmssd_data = metrics_data.get("rmssd")
+        if rmssd_data and rmssd_data.get("value") is not None and rmssd_data.get("value") != 0:
+            self.rmssd_info_value_label.setText(f"{rmssd_data.get('value'):.1f} {rmssd_data.get('unit','')}")
+
+        if metrics_data.get("fps", {}).get("value") is not None:
+            self.fps_info_value_label.setText(f"{metrics_data['fps']['value']:.1f}")
+        if metrics_data.get("yaw", {}).get("value") is not None:
+            self.yaw_info_value_label.setText(f"{metrics_data['yaw']['value']:.0f}°")
+        if metrics_data.get("pitch", {}).get("value") is not None:
+            self.pitch_info_value_label.setText(f"{metrics_data['pitch']['value']:.0f}°")
+        if metrics_data.get("roll", {}).get("value") is not None:
+            self.roll_info_value_label.setText(f"{metrics_data['roll']['value']:.0f}°")
+
+        cognitive_data = metrics_data.get("cognitive")
+        if cognitive_data:
+            blink_rate = cognitive_data.get("blink", {}).get("blink_pm", 0)
+            self.blink_info_value_label.setText(f"{blink_rate:.1f} /min")
+
+            cog_state = cognitive_data.get("cognitive", {})
+
+            attn_level = cog_state.get("attention_level", "N/A")
+            attn_score = cog_state.get("attention_score", 0.0)
+            self.attention_info_value_label.setText(f"{attn_level} ({attn_score:.2f})")
+
+            details = cog_state.get("details", {})
+            self.gaze_info_value_label.setText(f"{details.get('gaze_z', 0.0):.2f}")
+
+            status = cog_state.get("status", "N/A")
+            if status == "establishing_baseline":
+                progress = cog_state.get("progress", 0.0)
+                self.cognitive_status_info_value_label.setText(f"Baseline ({progress:.0%})")
+            else:
+                self.cognitive_status_info_value_label.setText(status.replace("_", " ").title())
 
 
     @pyqtSlot(str, object, object)

@@ -29,7 +29,7 @@ def main_logic(emit_frame, emit_metrics, should_stop):
     
     # Signal throttling to prevent UI queue overload
     last_emission_time = 0
-    EMISSION_THROTTLE_INTERVAL = 0.5  # 2 emissions to ui per second
+    EMISSION_THROTTLE_INTERVAL = 0.2  # 5 emissions to ui per second
     
     rf_model_loaded, scaler_loaded, label_encoder_loaded = stress_detection.load_stress_model_assets()
 
@@ -68,8 +68,15 @@ def main_logic(emit_frame, emit_metrics, should_stop):
                         "sdnn": {"value": last_sdnn, "unit": "ms"},
                         "rmssd": {"value": last_rmssd, "unit": "ms"},
                         "stress": {"value": None, "unit": ""},
-                        "rppg_signal": {"timestamps": best_ts, "values": pre_window}
+                        "rppg_signal": {"timestamps": best_ts, "values": pre_window},
+                        
+                        "fps": {"value": roi.fps},
+                        "yaw": {"value": roi.thetas[0] if roi.thetas else None},
+                        "pitch": {"value": roi.thetas[1] if roi.thetas else None},
+                        "roll": {"value": roi.thetas[2] if roi.thetas else None},
+                        "cognitive": roi.blink
                     }
+
                     predicted_stress = None
                     if rf_model_loaded and all(v is not None for v in [last_hr, last_sdnn, last_rmssd]):
                         predicted_stress, _ = stress_detection.predict_stress(
