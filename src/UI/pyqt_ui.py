@@ -115,7 +115,7 @@ class AppWindow(QMainWindow):
         video_layout = QVBoxLayout(video_group_box)
         self.video_display_label = QLabel("Press Start to Begin Monitoring")
         self.video_display_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.video_display_label.setMinimumSize(320, 240)
+        self.video_display_label.setMinimumSize(440, 320)
         self.video_display_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         video_layout.addWidget(self.video_display_label)
         self._apply_shadow_effect(video_group_box)
@@ -206,6 +206,8 @@ class AppWindow(QMainWindow):
 
         blink_layout, self.blink_info_value_label = self._create_info_row("👁️ Blink Rate:")
         self._setup_glow_effect(self.blink_info_value_label, subtle_glow_color, **subtle_glow_params)
+        blink_count_layout, self.blink_count_info_value_label = self._create_info_row("🔢 Blink Count:")
+        self._setup_glow_effect(self.blink_count_info_value_label, subtle_glow_color, **subtle_glow_params)
         attention_info_layout, self.attention_info_value_label = self._create_info_row("🧠 Attention:")
         self._setup_glow_effect(self.attention_info_value_label, subtle_glow_color, **subtle_glow_params)
         gaze_layout, self.gaze_info_value_label = self._create_info_row("👀 Gaze (Z):")
@@ -213,6 +215,7 @@ class AppWindow(QMainWindow):
         cognitive_status_layout, self.cognitive_status_info_value_label = self._create_info_row("🧩 Cognitive Status:")
         self._setup_glow_effect(self.cognitive_status_info_value_label, subtle_glow_color, **subtle_glow_params)
         main_layout.addLayout(blink_layout)
+        main_layout.addLayout(blink_count_layout)
         main_layout.addLayout(attention_info_layout)
         main_layout.addLayout(gaze_layout)
         main_layout.addLayout(cognitive_status_layout)
@@ -380,6 +383,7 @@ class AppWindow(QMainWindow):
         self.pitch_info_value_label.setText("N/A")
         self.roll_info_value_label.setText("N/A")
         self.blink_info_value_label.setText("N/A")
+        self.blink_count_info_value_label.setText("N/A")
         self.attention_info_value_label.setText("N/A")
         self.gaze_info_value_label.setText("N/A")
         self.cognitive_status_info_value_label.setText("N/A")
@@ -519,6 +523,9 @@ class AppWindow(QMainWindow):
         if cognitive_data:
             blink_rate = cognitive_data.get("blink", {}).get("blink_pm", 0)
             self._update_label_and_glow(self.blink_info_value_label, f"{blink_rate:.1f} /min")
+            blink_count = cognitive_data.get("blink", {}).get("blink_count", None)
+            if blink_count is not None:
+                self._update_label_and_glow(self.blink_count_info_value_label, str(blink_count))
 
             cog_state = cognitive_data.get("cognitive", {})
             attn_level = cog_state.get("attention_level", "N/A")
