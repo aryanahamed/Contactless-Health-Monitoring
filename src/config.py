@@ -1,61 +1,50 @@
 # config.py
-
-# here we gonna store all the global pipeline parameters and some global functions
-from mediapipe.tasks import python as mp_tasks
-from mediapipe.tasks.python.vision.face_landmarker import FaceLandmarkerOptions
-import os
 import numpy as np
-
-
-
-# camera settings
-camera_id = "src/vid.avi" # depends on ur device figure it out
-# camera_id = 0  # default camera ID for webcam
+# here we gonna store all the global pipeline parameters and some global functions
 
 
 # landmark indices for each region
-roi_landmarks = {
-    "forehead": np.array([109,108,107,55,8,285,336,337,338,10,151,9]),
-    "left_cheek": np.array([117,118,119,120,100,142,36,205,50,101]),
-    "right_cheek": np.array([349,348,347,346,280,425,266,371,329,330]),
+roi_indices = {
+    "forehead": np.array([109,10,338,337,336,9,107,108,151]),
+    "left_cheek": np.array([117,118,119,120,100,142,36,205,187,123,101,50]),
+    "right_cheek": np.array([349,348,347,346,352,411,280,425,266,371,329,330])
 }
 
 
+anchor_indices = np.array([1, 4, 5,195,197])
+
+roi_idx = {67,109,10,338,297,299,336,9,107,69,67,108,151,337,
+           117,118,119,120,100,142,36,205,187,123,101,50,
+           349,348,347,346,352,411,280,425,266,371,329,330}
+
+
 # buffer settings for time series
-window = 12
+window = 15
 hz = 30
-buffer_size = hz * window
+buffer_size = (hz * window) + 5
 
 # regions we care about for rPPG
 regions = ["forehead", "left_cheek", "right_cheek"]
 
-# returns the absolute path to the face_landmarker.task model
-def get_face_model_path():
-    base = os.path.dirname(os.path.abspath(__file__))
-    return os.path.abspath(os.path.join(base, "ROI/model", "face_landmarker.task"))
+#sorted index wise
+blend_keys=\
+[
+    "browDownLeft","browDownRight","browInnerUp","browOuterUpLeft","browOuterUpRight",
+    "cheekPuff","cheekSquintLeft","cheekSquintRight",
+    "eyeBlinkLeft","eyeBlinkRight","eyeLookDownLeft","eyeLookDownRight",
+    "eyeLookInLeft","eyeLookInRight","eyeLookOutLeft","eyeLookOutRight",
+    "eyeLookUpLeft","eyeLookUpRight","eyeSquintLeft","eyeSquintRight",
+    "eyeWideLeft","eyeWideRight",
+    "jawForward","jawLeft","jawOpen","jawRight",
+    "mouthClose","mouthDimpleLeft","mouthDimpleRight","mouthFrownLeft","mouthFrownRight",
+    "mouthFunnel","mouthLeft","mouthLowerDownLeft","mouthLowerDownRight",
+    "mouthPressLeft","mouthPressRight","mouthPucker","mouthRight",
+    "mouthRollLower","mouthRollUpper","mouthShrugLower","mouthShrugUpper",
+    "mouthSmileLeft","mouthSmileRight","mouthStretchLeft","mouthStretchRight",
+    "mouthUpperUpLeft","mouthUpperUpRight",
+    "noseSneerLeft","noseSneerRight","tongueOut"
+]
 
-
-# mediapipe face landmarker settings
-def get_face_landmarker_options():
-        base_options = mp_tasks.BaseOptions(
-            model_asset_path=get_face_model_path(),
-            delegate=mp_tasks.BaseOptions.Delegate.CPU
-        )
-
-        return FaceLandmarkerOptions(
-            base_options=base_options,
-            output_face_blendshapes=False,
-            output_facial_transformation_matrixes=True,
-            num_faces=1,
-            running_mode=mp_tasks.vision.RunningMode.VIDEO,
-            min_face_detection_confidence=0.6,
-            min_face_presence_confidence=0.6,
-            min_tracking_confidence=0.6
-        )
-
-
-
-# -- Constants -- #
 
 # -- pos_processing -- #
 BAND_MIN_HZ = 0.67  # 40 BPM
@@ -82,5 +71,9 @@ RESP_SIG_INTERPOLATION_FS = 4.0 # Hz for interpolation of BR
 
 # Smoothing
 SMOOTHING_WINDOW_SIZE = 5
+
+
+
+
 
 

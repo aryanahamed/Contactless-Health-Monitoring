@@ -1,153 +1,105 @@
-import numpy as np
 import cv2
-from matplotlib import pyplot as plt
+import numpy as np
 
 
-
-
-def draw_hulls(frame, hulls,cords,valid_rois,theta,fps_actual):
+def draw(frame, roi):
+    landmarks, regions, valid_rois, thetas, fps_actual, blink, connections = (
+        roi.landmarks, roi.region, roi.valid_rois, roi.thetas, roi.fps, roi.blink, roi.landmarker.connections)
     frame = frame.copy()
-    if not hulls or not valid_rois:
-        return frame
 
+    if landmarks is not None:
+        draw_face_tesselation(frame, landmarks, connections)
 
-    for region, data in hulls.items():
-        if data is None or region not in valid_rois:
-            continue
+    if regions and valid_rois:
+        hulls, points = [], []
+        for region in valid_rois:
+            data = regions.get(region)
+            if data is None:
+                continue
 
-        [cv2.circle(frame, tuple(map(int, pt)), 1, (0, 255, 0), -1) for pt in cords[region]]
+            if data["hull"] is not None:
+                hulls.append(data["hull"].astype(np.int32))
+            if data["coordinates"] is not None:
+                points.extend(data["coordinates"].astype(np.int32))
 
-        # Draw bounding box (blue rectangle)
-        bbox = data.get("bbox")
-        if bbox is not None:
-            x1, y1, x2, y2 = bbox
-            cv2.rectangle(frame, (x1, y1), (x2, y2), color=(255, 0, 0), thickness=1)
+        if hulls:
+            cv2.polylines(frame, hulls, True, (0, 125, 0), 1)
+        if points:
+            for pt in points:
+                cv2.circle(frame, tuple(pt), 1, (0, 255, 0), -1)
 
-    #draw yaw arrow
-    draw_yaw_arrow_on_frame(frame,theta)
-    fps_text = f"FPS: {fps_actual:.2f}"
-    cv2.putText(frame, fps_text, (10, 25),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-
+    # Combined text drawing
+    draw_all_text(frame, thetas, fps_actual, blink)
     return frame
 
 
-def draw_yaw_arrow_on_frame(frame, theta_deg):
-    """
-    Draws a horizontal yaw arrow near the top center of the frame, with direction and length based on yaw angle.
-    """
-    h, w = frame.shape[:2]
-
-    # Define origin point near top-center
-    cx = w // 2
-    cy = 40  # distance from top (adjust as needed)
-
-    # Arrow length scaling
-    abs_theta = abs(theta_deg)
-    min_len = 10
-    max_len = 60
-    scale = min(max(abs_theta / 30, 0), 1)  # Normalize between 0 and 1 for up to 30°
-    arrow_len = int(min_len + scale * (max_len - min_len))  # Grow with angle
-
-    # Arrow direction (follows face turn)
-    dx = arrow_len if theta_deg > 0 else -arrow_len
-    dy = 0
-
-    end_x = cx + dx
-    end_y = cy + dy
-
-    color = (255, 255, 255)
-
-    # Draw arrow and yaw text
-    cv2.arrowedLine(frame, (cx, cy), (end_x, end_y), color, 2, tipLength=0.3)
-    cv2.putText(frame, f"{round(theta_deg, 2)}", (cx - 20, cy - 10),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-    return frame
+def draw_face_tesselation(frame, landmarks, connections):
+    landmarks_int = landmarks.astype(np.int32)
+    lines = np.array([[landmarks_int[c.start], landmarks_int[c.end]] for c in connections])
+    cv2.polylines(frame, lines, False, (128, 128, 128), 1)
 
 
+def draw_all_text(frame, thetas, fps_actual, cognitive_data):
+    line_height = 25
+
+    # Build text array starting with existing metrics
+    texts = [
+        f"FPS: {fps_actual:.1f}",
+        f"Yaw: {int(thetas[0])}",
+        f"Pitch: {int(thetas[1])}",
+        f"Roll: {int(thetas[2])}"
+    ]
+
+    # Add cognitive metrics if available
+    if cognitive_data:
+        blink_data = cognitive_data.get("blink", {})
+        cognitive_state = cognitive_data.get("cognitive", {})
+
+        # Blink metrics
+        blink_count = blink_data.get("blink_count", 0)
+        blink_rate = blink_data.get("blink_pm", 0)
+        texts.append(f"Blinks: {blink_count} ({blink_rate:.1f}/min)")
+
+        # Stress and attention
+        stress_level = cognitive_state.get("stress_level", "-")
+        stress_score = cognitive_state.get("stress_score", 0)
+        texts.append(f"Stress: {stress_level} ({stress_score:.2f})")
+
+        attention_level = cognitive_state.get("attention_level", "-")
+        attention_score = cognitive_state.get("attention_score", 0)
+        texts.append(f"Attention: {attention_level} ({attention_score:.2f})")
+
+        # Z-scores from details
+        details = cognitive_state.get("details", {})
+        gaze_z = details.get("gaze_z", 0)
+        eye_opening_z = details.get("eye_opening_z", 0)
+        eye_strain_z = details.get("eye_strain_z", 0)
+        texts.append(f"Gaze: {gaze_z:.2f}")
+        texts.append(f"Eye Opening: {eye_opening_z:.2f}")
+        texts.append(f"Eye Strain: {eye_strain_z:.2f}")
+
+        # Status (with progress only during baseline)
+        status = cognitive_state.get("status", "-")
+        progress = cognitive_state.get("progress", 0)
+        if status == "establishing_baseline":
+            texts.append(f"Status: ({progress:.0f}%)")
+        else:
+            texts.append(f"Status: {status}")
+
+    # Draw all text
+    for i, text in enumerate(texts):
+        y_pos = 25 + i * line_height
+        cv2.putText(frame, text, (10, y_pos), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
 
 
-class LongTermCollector:
-    def __init__(self):
-        self.raw_series = {}
-        self.interp_series = {}
-        self.last_timestamp = None  # To detect duplicates
 
-    def append(self, uniform_series, series_np):
-        # Get last index (most recent frame in the sliding buffer)
-        idx = -1
-        ts_new = series_np["timestamps"][idx]
-        if ts_new == self.last_timestamp:
-            return  # skip duplicate
-        self.last_timestamp = ts_new
-
-        for region in series_np:
-            if region == "timestamps":
-                self.raw_series.setdefault("timestamps", []).append(series_np["timestamps"][idx])
-                self.interp_series.setdefault("timestamps", []).append(uniform_series["timestamps"][idx])
-            else:
-                self.raw_series.setdefault(region, []).append(series_np[region][idx])
-                self.interp_series.setdefault(region, []).append(uniform_series[region][idx])
-
-    def get_combined_series(self):
-        return (
-            {k: np.array(v) for k, v in self.raw_series.items()},
-            {k: np.array(v) for k, v in self.interp_series.items()}
-        )
-
-
-def plot_interpolation_comparison(uniform_series, series_np, region='forehead'):
-
-    if region not in uniform_series or region not in series_np:
-        print(f"Region '{region}' not found.")
-        return
-
-    # Extract timestamps
-    t_orig = np.array(series_np["timestamps"])
-    t_interp = np.array(uniform_series["timestamps"])
-
-    # Extract RGB values
-    v_orig = np.array(series_np[region])  # shape: (N, 3)
-    v_interp = np.array(uniform_series[region])  # shape: (N, 3)
-
-    colors = ['red', 'green', 'blue']
-    plt.figure(figsize=(12, 5))
-
-    for ch in range(3):
-        # Interpolated curve
-        plt.plot(t_interp, v_interp[:, ch], '-', label=f'{colors[ch]} interp', linewidth=2)
-        # Original raw values (possibly with NaNs)
-        plt.plot(t_orig, v_orig[:, ch], 'o', alpha=0.4, label=f'{colors[ch]} raw')
-
-    plt.title(f"RGB Interpolation vs Raw – Region: {region}")
-    plt.xlabel("Time (s)")
-    plt.ylabel("Value")
-    plt.grid(True)
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
-
-def w_i_plot(u,series,region):
-    t_raw = np.array(series["timestamps"])
-    t_interp = np.array(u["timestamps"])
-    raw = np.array(series[region])  # (N, 3)
-    interp = np.array(u[region])  # (M, 3)
-
-    colors = ['red', 'green', 'blue']
-    plt.figure(figsize=(10, 5))
-    for ch in range(3):
-        plt.plot(t_interp, interp[:, ch], '-', label=f'{colors[ch]} interp', linewidth=2)
-        plt.plot(t_raw, raw[:, ch], 'o', alpha=0.5, label=f'{colors[ch]} raw')
-    plt.title(f"[DEBUG] One Window – PCHIP vs Raw: {region}")
-    plt.xlabel("Time (s)")
-    plt.ylabel("Value")
-    plt.grid(True)
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
-
-
+def show(frame,scale):
+    if scale != 1:
+        h, w = frame.shape[:2]
+        new_w = int(w * scale)
+        new_h = int(h * scale)
+        frame = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+    cv2.imshow('ROI', frame)
 
 
 

@@ -1,30 +1,25 @@
 import threading
-import collections
+import queue
 import cv2
-from config import camera_id
 import time
-import os
 import psutil
-#sets up a thread for capturing and using a dequeue to store the frame
-#and allowing a get method for the main to get the frame
+
+
 class CaptureThread:
     # not sure if to not limit queue size, might cause series memory issues
-    def __init__(self, max_queue_size=2000):
-        #initialize the thread
+    def __init__(self,camera_id = 0, debug=False):
+        # initialize the thread
         self.cap = cv2.VideoCapture(camera_id)
-        # checking if camera id is a video file not webcam
-        self.use_video = isinstance(camera_id, str)
-        self.deque = collections.deque(maxlen=max_queue_size) #dequeue to store frames with timestamps
-        self.running = threading.Event()
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         if not self.cap.isOpened():
-            raise IOError(f"Could not open video source {camera_id}")
-        self.thread = threading.Thread(target=self._capture_loop, daemon=True) #daemon true just allows main to exit
-        self.lock = threading.Lock() #lock to prevent data inconsistency
-        # only calculating fps if it's a video
-        self.fps = self.cap.get(cv2.CAP_PROP_FPS) if self.use_video else None
-        self.frame_idx = 0
+            raise IOError
+        self.use_video = isinstance(camera_id, str)  # vid
+        self.queue = queue.Queue(maxsize=2000)
+        self.running = threading.Event()
+        self.thread = threading.Thread(target=self._capture_loop, daemon=True)  # daemon true just allows main to exit
+        self.debug = debug
 
-    #self-explanatory
+
     def start(self):
         self.running.set()
         self.thread.start()
@@ -35,44 +30,53 @@ class CaptureThread:
         self.cap.release()
 
     def _capture_loop(self):
+
         while self.running.is_set():
             success, frame = self.cap.read()
-            frame = cv2.flip(frame, 1) #flipping on axis y
+
             if not success:
-                if self.use_video:
-                    current_frame = self.cap.get(cv2.CAP_PROP_POS_FRAMES)
-                    total_frames = self.cap.get(cv2.CAP_PROP_FRAME_COUNT)
-                    if current_frame >= total_frames - 1:
-                        print("[CaptureThread] End of video file reached.")
-                        self.running.clear()
-                        break
+                if self.use_video and self._check_video_end():
+                    break
                 time.sleep(0.01)
                 continue
-            if self.use_video:
-                # calculate the timestamp for video
-                # checking if the video fps is valid, if not use 30
-                timestamp = self.cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0  # seconds
-                self.frame_idx += 1
-            else:
-                timestamp = time.perf_counter()
-            with self.lock:
-                self.deque.append((frame, timestamp))
-            print(f"[CaptureThread] Queue size: {len(self.deque)}")
-            process = psutil.Process(os.getpid())
-            mem_mb = process.memory_info().rss / (1024 ** 2)
-            print(f"[Memory] After deque append - {mem_mb:.2f} MB")
+
+            frame = cv2.flip(frame, 1)
+            timestamp = self._get_timestamp()
+
+            try:
+                self.queue.put((frame, timestamp), timeout=0.01)
+            except queue.Full:
+                pass
+
+            self._debug_print()
+    def _check_video_end(self):
+        current = self.cap.get(cv2.CAP_PROP_POS_FRAMES)
+        total = self.cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        if current >= total - 1:
+            self.running.clear()
+            return True
+        return False
+
+
+    def _get_timestamp(self):
+        if self.use_video:
+            return self.cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
+        return time.perf_counter()
+
+    def _debug_print(self):
+        if self.debug and psutil:
+            mem_mb = psutil.Process().memory_info().rss / (1024 ** 2)
+            print(f"[CaptureThread] Queue={self.queue.qsize()}  Mem={mem_mb:.1f}MB")
 
     def get_frame(self):
-        with self.lock:
-            if self.deque:
-                return self.deque.popleft() # taking the first value and removing it so to not double read
-        return None, None
-
+        try:
+            return self.queue.get_nowait()
+        except queue.Empty:
+            return None, None
 
 
 def wait_for_startup(capture_thread, delay_sec=3):
     start_time = time.time()
-
     while True:
         frame, _ = capture_thread.get_frame()
         if frame is None:
@@ -80,7 +84,7 @@ def wait_for_startup(capture_thread, delay_sec=3):
             continue
 
         elapsed = time.time() - start_time
-        remaining = max(0, int(delay_sec - elapsed))
+        remaining = max(0, delay_sec - elapsed) # noqa
 
         # Show "Initializing..." with countdown
         vis = frame.copy()
@@ -96,3 +100,5 @@ def wait_for_startup(capture_thread, delay_sec=3):
             with capture_thread.lock:
                 capture_thread.deque.clear()
             return
+
+

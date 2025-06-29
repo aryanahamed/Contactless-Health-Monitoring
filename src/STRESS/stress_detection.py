@@ -67,7 +67,7 @@ def predict_stress(hr, sdnn, rmssd, model, scaler, label_encoder):
     
     predicted_probabilities = model.predict_proba(current_features_scaled)
     
-    # Use the following if you wanna show probabilities for each class
+    # Use the following to show probabilities for each class
     class_probs = dict(zip(label_encoder.classes_, predicted_probabilities[0]))
     
     return predicted_condition_name, class_probs

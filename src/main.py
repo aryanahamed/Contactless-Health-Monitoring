@@ -1,8 +1,8 @@
 import time
-from capture_thread import CaptureThread,wait_for_startup
+from capture_thread import CaptureThread
 from ROI.extract_roi import (Extract)
-from ROI.visualization import draw_hulls,plot_interpolation_comparison,LongTermCollector
-from timeseries.manager import (Manager)
+from ROI.visualization import draw
+from timeseries.manager import (TimeSeries)
 import cProfile
 import pstats
 from collections import deque
@@ -10,38 +10,32 @@ import io
 from POS import signal_pipeline, signal_processing
 from BR import breathing_pipeline
 from STRESS import stress_detection
-# import heartpy as hp
 from PyQt6.QtWidgets import QApplication
 from UI.pyqt_ui import AppWindow
 import sys
 
 
 def main_logic(emit_frame, emit_metrics, should_stop):
-    roi_class = Extract()
-    series_generator =  Manager()
-    capture = CaptureThread()
+    roi = Extract()
+    series =  TimeSeries()
+    capture = CaptureThread("src/vid.avi", debug=True)
     capture.start()
-    #collector = LongTermCollector()
-    # wait_for_startup(capture, delay_sec=3)
     frame_count = 0
     fps_window = deque(maxlen=30)  # last 30 timestamps
     DETECTION_INTERVAL = 2  # every 2 frames
     last_hr = None
     hr_data = []
     br_data = []
-    sdnn_data = []
-    rmssd_data = []
     
     # Signal throttling to prevent UI queue overload
     last_emission_time = 0
     EMISSION_THROTTLE_INTERVAL = 0.5  # 2 emissions to ui per second
     
-    # rf_model_loaded, scaler_loaded, label_encoder_loaded = stress_detection.load_stress_model_assets()
+    rf_model_loaded, scaler_loaded, label_encoder_loaded = stress_detection.load_stress_model_assets()
 
     try:
         while not should_stop():
             frame, timestamp = capture.get_frame()
-            # print(f"Frame: {frame_count}, Timestamp: {timestamp:.3f}")
             if frame is None:
                 if not capture.running.is_set() and not should_stop():
                     break
@@ -49,20 +43,14 @@ def main_logic(emit_frame, emit_metrics, should_stop):
                 continue
             fps_window.append(timestamp)
 
-            if len(fps_window) >= 2:
-                duration = fps_window[-1] - fps_window[0]
-                fps_actual = (len(fps_window) - 1) / duration if duration > 0 else 0
-            else:
-                fps_actual = 0.0
             if frame_count % DETECTION_INTERVAL == 0:
-                roi_class.process_frame(frame, timestamp)
-                vis_frame = draw_hulls(frame, roi_class.hulls,roi_class.region_cords,
-                                   roi_class.valid_rois, roi_class.thetas[0], fps_actual)
+                roi.process_frame(frame, timestamp)
+                vis_frame = draw(frame, roi)
                 emit_frame(vis_frame)
-            if roi_class.patches:
-                series = series_generator.get_series(roi_class.patches, timestamp)
-                if series:
-                    best_filt, _, best_ts, best_fps, quality, _ = signal_processing.select_best_signal(series)
+            if roi.patches:
+                timeseries = series.get(roi.patches, timestamp)
+                if timeseries:
+                    best_filt, _, best_ts, best_fps, quality, _ = signal_processing.select_best_signal(timeseries)
                     last_hr, last_sdnn, last_rmssd, hrv_quality_status = signal_pipeline.process_hr_from_signal(
                         best_filt, best_ts, best_fps, quality
                     )
@@ -70,28 +58,8 @@ def main_logic(emit_frame, emit_metrics, should_stop):
                         best_filt, best_ts, best_fps, quality
                     )
                     
-                    # Heartpy implementation
-                    # forehead = series["forehead"][:, 1]
-                    # filtered_signal = hp.filter_signal(forehead, cutoff=[0.67, 3.0], sample_rate=30, order=3, filtertype='bandpass')
-                    # working_data, measures = hp.process(filtered_signal, 30.0)
-                    # last_hr = measures['bpm'] if 'bpm' in measures else None
-                    # # print("Heart rate(HeartPy):", measures['bpm'])
-                    # # hr_data.append((timestamp, measures['bpm']))
-
-
-                    #collector.append(u, series)
-                    #raw_all, uniform_all = collector.get_combined_series()
-                    #if len(raw_all.get("forehead", [])) >= 1000:
-                        #plot_interpolation_comparison(uniform_all, raw_all, region="forehead")
-                        #break
-                    
                     if last_hr is not None: hr_data.append((timestamp, last_hr))
                     if last_br is not None: br_data.append((timestamp, last_br))
-                    
-                    # print(f"HRV Quality: {hrv_quality_status}")
-                    
-                    # if quality is not None:
-                        # print(f"Quality Score: {quality:.2f}")
                     
                     metrics_data = {
                         "timestamp": timestamp,
@@ -101,14 +69,14 @@ def main_logic(emit_frame, emit_metrics, should_stop):
                         "rmssd": {"value": last_rmssd, "unit": "ms"},
                         "stress": {"value": None, "unit": ""}
                     }
-                    # predicted_stress = None
-                    # if rf_model_loaded and all(v is not None for v in [last_hr, last_sdnn, last_rmssd]):
-                    #     predicted_stress, _ = stress_detection.predict_stress(
-                    #         last_hr, last_sdnn, last_rmssd,
-                    #         rf_model_loaded, scaler_loaded, label_encoder_loaded
-                    #     )
-                    #     if predicted_stress:
-                    #         metrics_data["stress"]["value"] = predicted_stress
+                    predicted_stress = None
+                    if rf_model_loaded and all(v is not None for v in [last_hr, last_sdnn, last_rmssd]):
+                        predicted_stress, _ = stress_detection.predict_stress(
+                            last_hr, last_sdnn, last_rmssd,
+                            rf_model_loaded, scaler_loaded, label_encoder_loaded
+                        )
+                        if predicted_stress:
+                            metrics_data["stress"]["value"] = predicted_stress
 
                     # Signal throttling to prevent ui queue overload
                     current_time = time.time()
