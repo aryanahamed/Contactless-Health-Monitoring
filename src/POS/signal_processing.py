@@ -145,16 +145,16 @@ def select_best_signal(input_data):
             if signal is None:
                 continue
             
-            filtered_signal = apply_butterworth_bandpass(signal, BAND_MIN_HZ, BAND_MAX_HZ, fps, order=3)
-            if filtered_signal is None:
+            pre_windowed = apply_butterworth_bandpass(signal, BAND_MIN_HZ, BAND_MAX_HZ, fps, order=3)
+            if pre_windowed is None:
                 continue
-            
-            filtered_signal = apply_windowing(filtered_signal, window_type='hann')
+
+            filtered_signal = apply_windowing(pre_windowed, window_type='hann')
             quality_score = calculate_signal_quality(filtered_signal, fps)
             
             if quality_score > highest_quality:
                 highest_quality = quality_score
-                best_result = (filtered_signal, cleaned_rgb, cleaned_timestamps, fps, quality_score)
+                best_result = (filtered_signal, pre_windowed, cleaned_rgb, cleaned_timestamps, fps, quality_score)
                 best_method = f"{region}_{method_name}"
                 
                 if quality_score > 8.5:
@@ -163,4 +163,4 @@ def select_best_signal(input_data):
         if highest_quality > 8.5:
             break
     
-    return (*best_result, best_method) if best_result else (None, None, None, None, -1.0, "none")
+    return (*best_result, best_method) if best_result else (None, None, None, None, None, -1.0, "none")

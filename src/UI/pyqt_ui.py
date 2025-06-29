@@ -129,19 +129,10 @@ class AppWindow(QMainWindow):
         self.hr_plot_widget = self._create_plot("HR over Time", "HR (bpm)", PLOT_PEN_HR, y_range=(40, 150))
         self.hr_curve = self.hr_plot_widget.getPlotItem().listDataItems()[0]
 
-        # HRV legend row
-        hrv_title_row = QHBoxLayout()
-        # hrv_title_label = QLabel("HRV (SDNN & RMSSD)")
-        # hrv_title_label.setStyleSheet(f"color: {COLOR_TEXT_SECONDARY}; font-size: 11pt; font-weight: bold;")
-        # hrv_title_row.addWidget(hrv_title_label)
-        hrv_title_row.addStretch()
-        hrv_legend_label = QLabel("🟡 SDNN   🟢 RMSSD")
-        hrv_legend_label.setStyleSheet("font-size: 10pt; padding-left: 10px;")
-        hrv_title_row.addWidget(hrv_legend_label)
-
         self.hrv_plot_widget = self._create_plot("HRV over Time", "HRV (ms)", y_range=(0, 200))
-        self.sdnn_curve = self.hrv_plot_widget.getPlotItem().plot(pen=PLOT_PEN_SDNN)
-        self.rmssd_curve = self.hrv_plot_widget.getPlotItem().plot(pen=PLOT_PEN_RMSSD)
+        self.hrv_plot_widget.addLegend(offset=(-10, 0))
+        self.sdnn_curve = self.hrv_plot_widget.getPlotItem().plot(pen=PLOT_PEN_SDNN, name="🟢 SDNN")
+        self.rmssd_curve = self.hrv_plot_widget.getPlotItem().plot(pen=PLOT_PEN_RMSSD, name="🟡 RMSSD")
 
         self.br_plot_widget = self._create_plot("BR over Time", "BR (brpm)", PLOT_PEN_BR, y_range=(5, 30))
         self.br_curve = self.br_plot_widget.getPlotItem().listDataItems()[0]
@@ -149,7 +140,6 @@ class AppWindow(QMainWindow):
         right_column_layout.addWidget(video_group_box, stretch=2)
         right_column_layout.addWidget(self.rppg_plot_widget, stretch=1)
         right_column_layout.addWidget(self.hr_plot_widget, stretch=1)
-        right_column_layout.addLayout(hrv_title_row)
         right_column_layout.addWidget(self.hrv_plot_widget, stretch=1)
         right_column_layout.addWidget(self.br_plot_widget, stretch=1)
 
@@ -411,8 +401,11 @@ class AppWindow(QMainWindow):
             self.rmssd_curve.setData(rmssd_times, rmssd_values)
 
             if hr_times.size > 0:
+                view_end_time = current_elapsed_time + 1
+                view_start_time = max(0, view_end_time - 30)
+
                 for plot in [self.hr_plot_widget, self.br_plot_widget, self.hrv_plot_widget]:
-                    plot.getPlotItem().setXRange(max(0, current_elapsed_time - 30), current_elapsed_time + 1)
+                    plot.getPlotItem().setXRange(view_start_time, view_end_time, padding=0)
                     
         except Exception as e:
             print(f"Error applying plot data: {e}")

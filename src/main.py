@@ -50,7 +50,7 @@ def main_logic(emit_frame, emit_metrics, should_stop):
             if roi.patches:
                 timeseries = series.get(roi.patches, timestamp)
                 if timeseries:
-                    best_filt, _, best_ts, best_fps, quality, _ = signal_processing.select_best_signal(timeseries)
+                    best_filt, pre_window, _, best_ts, best_fps, quality, _ = signal_processing.select_best_signal(timeseries)
                     last_hr, last_sdnn, last_rmssd, hrv_quality_status = signal_pipeline.process_hr_from_signal(
                         best_filt, best_ts, best_fps, quality
                     )
@@ -68,7 +68,7 @@ def main_logic(emit_frame, emit_metrics, should_stop):
                         "sdnn": {"value": last_sdnn, "unit": "ms"},
                         "rmssd": {"value": last_rmssd, "unit": "ms"},
                         "stress": {"value": None, "unit": ""},
-                        "rppg_signal": {"timestamps": best_ts, "values": best_filt}
+                        "rppg_signal": {"timestamps": best_ts, "values": pre_window}
                     }
                     predicted_stress = None
                     if rf_model_loaded and all(v is not None for v in [last_hr, last_sdnn, last_rmssd]):
