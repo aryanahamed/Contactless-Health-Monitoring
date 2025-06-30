@@ -11,21 +11,23 @@ from config import (
     RESP_SIG_INTERPOLATION_FS
 )
 from POS.signal_processing import apply_butterworth_bandpass
-
+# This is where we have functions to extract the breathing signal from the rppg signal.
 
 def extract_breathing_signal(rppg_signal, timestamps, fs):
     if rppg_signal is None or len(rppg_signal) < MIN_SAMPLES_FOR_BR:
         return None, None
 
+    # Filter the signal
     cardiac_filtered_ppg = apply_butterworth_bandpass(
         rppg_signal, MIN_HR_HZ, MAX_HR_HZ, fs, order=2
     )
     if cardiac_filtered_ppg is None:
         return None, None
 
+    # Find peaks
     peak_distance = int(fs / MAX_HR_HZ)
     peaks, _ = find_peaks(
-        cardiac_filtered_ppg, 
+        cardiac_filtered_ppg,
         prominence=np.std(cardiac_filtered_ppg) * 0.5,
         distance=peak_distance
     )
@@ -38,8 +40,8 @@ def extract_breathing_signal(rppg_signal, timestamps, fs):
     if len(peak_times) < 2:
         return None, None
     ibi_signal = np.diff(peak_times)
-    min_ibi = 60.0 / 180.0
-    max_ibi = 60.0 / 40.0
+    min_ibi = 60.0 / 180.0  # Minimum ibi (max hr 180 bpm)
+    max_ibi = 60.0 / 40.0   # Maximum ibi (min hr 40 bpm)
     valid_ibi_mask = (ibi_signal >= min_ibi) & (ibi_signal <= max_ibi)
     if np.sum(valid_ibi_mask) < 3:
         ibi_cleaned = np.zeros_like(am_signal[1:])
@@ -50,6 +52,8 @@ def extract_breathing_signal(rppg_signal, timestamps, fs):
     ibi_times = peak_times[1:]
     if len(am_signal) < 2 or len(ibi_cleaned) < 2:
         return None, None
+    
+    # Interpolation happens here
     interp_time = np.arange(timestamps[0], timestamps[-1], 1.0 / RESP_SIG_INTERPOLATION_FS)
     interp_am = np.interp(interp_time, peak_times, am_signal)
     interp_ibi = np.interp(interp_time, ibi_times, ibi_cleaned)
@@ -57,15 +61,20 @@ def extract_breathing_signal(rppg_signal, timestamps, fs):
     std_am = np.std(interp_am)
     std_ibi = np.std(interp_ibi)
 
+    # Check for flat signals
     if std_am < 1e-6 or std_ibi < 1e-6:
         return None, None
 
+    # z score normalization (remove outliers)
     am_z = (interp_am - np.mean(interp_am)) / std_am
     ibi_z = (interp_ibi - np.mean(interp_ibi)) / std_ibi
 
-    combined_signal = am_z - ibi_z 
+    # Combine amplitude and IBI signals for fusion
+    combined_signal = am_z - ibi_z
 
+    # Remove linear trend from combined signal
     respiratory_signal = scipy.signal.detrend(combined_signal)
+    
     return respiratory_signal, interp_time
 
 
@@ -75,10 +84,12 @@ def calculate_breathing_rate_welch(breathing_signal, timestamps):
     fs = 1.0 / np.median(np.diff(timestamps))
     if fs <= 0 or np.isnan(fs):
         return None
+    # Remove DC component because it can skew the PSD
     signal = breathing_signal - np.mean(breathing_signal)
     nperseg = min(len(signal), 256)
     nfft = 4096
     try:
+        # Welch method for psd
         freqs, psd = scipy.signal.welch(signal, fs=fs, nperseg=nperseg, nfft=nfft, window='hann')
     except ValueError as e:
         return None
@@ -89,6 +100,7 @@ def calculate_breathing_rate_welch(breathing_signal, timestamps):
     valid_psd = psd[valid_mask]
     if len(valid_psd) == 0:
         return None
+    # find frequency with maximum power in the valid range
     peak_idx = np.argmax(valid_psd)
     dominant_freq_hz = valid_freqs[peak_idx]
     breathing_rate_bpm = dominant_freq_hz * 60.0
