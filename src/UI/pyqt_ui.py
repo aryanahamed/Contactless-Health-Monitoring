@@ -166,6 +166,22 @@ class AppWindow(QMainWindow):
         separator.setStyleSheet(f"border: 1px solid {COLOR_SHADOW};")
         return separator
 
+    def _create_info_subheader(self, text):
+        label = QLabel(text)
+        font = QFont("Segoe UI", 9, QFont.Weight.Bold)
+        font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1)
+        label.setFont(font)
+        label.setStyleSheet(f"""
+            color: {COLOR_TEXT_SECONDARY};
+            background-color: {COLOR_SHADOW};
+            border-radius: 4px;
+            padding: 2px 8px;
+            margin-top: 8px;
+            margin-bottom: 4px;
+        """)
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        return label
+
     def _create_info_panel(self):
         info_group_box = QGroupBox()
         main_layout = QVBoxLayout(info_group_box)
@@ -181,17 +197,19 @@ class AppWindow(QMainWindow):
         subtle_glow_color = COLOR_TEXT_SECONDARY
         subtle_glow_params = {'blur_radius': 15, 'duration': 600}
 
+        # HRV METRICS
+        main_layout.addWidget(self._create_info_subheader("HEART RATE VARIABILITY"))
         sdnn_layout, self.sdnn_info_value_label = self._create_info_row("💓 SDNN:")
         self._setup_glow_effect(self.sdnn_info_value_label, COLOR_ACCENT_SECONDARY, **subtle_glow_params)
         rmssd_layout, self.rmssd_info_value_label = self._create_info_row("📈 RMSSD:")
         self._setup_glow_effect(self.rmssd_info_value_label, COLOR_ACCENT_WARN, **subtle_glow_params)
         main_layout.addLayout(sdnn_layout)
         main_layout.addLayout(rmssd_layout)
-        main_layout.addWidget(self._create_separator())
 
+        # HEAD POSE & QUALITY
+        main_layout.addWidget(self._create_info_subheader("SIGNAL & POSE"))
         fps_layout, self.fps_info_value_label = self._create_info_row("🎯 FPS:")
         self._setup_glow_effect(self.fps_info_value_label, subtle_glow_color, **subtle_glow_params)
-
         quality_score_layout, self.quality_score_value_label = self._create_info_row("📊 Quality Score:")
         self._setup_glow_effect(self.quality_score_value_label, subtle_glow_color, **subtle_glow_params)
         main_layout.addLayout(fps_layout)
@@ -206,9 +224,9 @@ class AppWindow(QMainWindow):
         main_layout.addLayout(yaw_layout)
         main_layout.addLayout(pitch_layout)
         main_layout.addLayout(roll_layout)
-        
-        main_layout.addWidget(self._create_separator())
 
+        # COGNITIVE METRICS
+        main_layout.addWidget(self._create_info_subheader("COGNITIVE ANALYSIS"))
         blink_layout, self.blink_info_value_label = self._create_info_row("👁️ Blink Rate:")
         self._setup_glow_effect(self.blink_info_value_label, subtle_glow_color, **subtle_glow_params)
         blink_count_layout, self.blink_count_info_value_label = self._create_info_row("🔢 Blink Count:")
@@ -224,7 +242,7 @@ class AppWindow(QMainWindow):
         main_layout.addLayout(attention_info_layout)
         main_layout.addLayout(gaze_layout)
         main_layout.addLayout(cognitive_status_layout)
-        
+
         self._apply_shadow_effect(info_group_box)
         return info_group_box
 
@@ -394,7 +412,7 @@ class AppWindow(QMainWindow):
         self.cognitive_status_info_value_label.setText("N/A")
 
         self.stress_value_label.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY};")
-        self.stress_value_label.setFont(QFont("Segoe UI", 32, QFont.Weight.Bold))
+        self.stress_value_label.setFont(QFont("Segoe UI", 24, QFont.Weight.Bold))
         self.avg_hr_label.setText("N/A")
         self.avg_br_label.setText("N/A")
         self.update_status(status="ready")
@@ -402,8 +420,8 @@ class AppWindow(QMainWindow):
     def _create_metrics_group(self, title, key_prefix, icon=None):
         group_box = QGroupBox()
         main_v_layout = QVBoxLayout(group_box)
-        main_v_layout.setContentsMargins(15, 10, 15, 15)
-        main_v_layout.setSpacing(5)
+        main_v_layout.setContentsMargins(8, 6, 8, 8)
+        main_v_layout.setSpacing(3)
 
         title_bar_layout = QHBoxLayout()
         if icon:
@@ -419,7 +437,7 @@ class AppWindow(QMainWindow):
 
         content_layout = QHBoxLayout()
         value_label = QLabel("N/A")
-        value_label.setFont(QFont("Segoe UI", 32, QFont.Weight.Bold))
+        value_label.setFont(QFont("Segoe UI", 24, QFont.Weight.Bold))
         value_label.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY};")
         value_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         
@@ -431,7 +449,7 @@ class AppWindow(QMainWindow):
         self._setup_glow_effect(value_label, glow_colors.get(key_prefix, COLOR_ACCENT_PRIMARY))
 
         unit_label = QLabel("")
-        unit_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Normal))
+        unit_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Normal))
         unit_label.setStyleSheet(f"color: {COLOR_TEXT_SECONDARY};")
         unit_label.setAlignment(Qt.AlignmentFlag.AlignBottom)
         content_layout.addStretch()
@@ -505,7 +523,7 @@ class AppWindow(QMainWindow):
                 if key == "stress":
                     stress_color = {"Low Intensity": COLOR_ACCENT_SECONDARY, "Medium Intensity": COLOR_ACCENT_WARN, "High Intensity": COLOR_ACCENT_ALERT}.get(current_text, COLOR_TEXT_PRIMARY)
                     value_label.setStyleSheet(f"color: {stress_color};")
-                    value_label.setFont(QFont("Segoe UI", 28 if current_text != "N/A" else 32, QFont.Weight.Bold))
+                    value_label.setFont(QFont("Segoe UI", 20 if current_text != "N/A" else 24, QFont.Weight.Bold))
     
         sdnn_data = metrics_data.get("sdnn")
         if sdnn_data and sdnn_data.get("value") is not None and sdnn_data.get("value") != 0:
