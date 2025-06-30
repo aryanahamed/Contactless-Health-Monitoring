@@ -18,7 +18,7 @@ import sys
 def main_logic(emit_frame, emit_metrics, should_stop):
     roi = Extract()
     series =  TimeSeries()
-    capture = CaptureThread("src/vid.avi", debug=True)
+    capture = CaptureThread("src/vid.avi", debug=True) # Change to 0 for webcam
     capture.start()
     frame_count = 0
     fps_window = deque(maxlen=30)  # last 30 timestamps
@@ -31,6 +31,7 @@ def main_logic(emit_frame, emit_metrics, should_stop):
     last_emission_time = 0
     EMISSION_THROTTLE_INTERVAL = 0.2  # 5 emissions to ui per second
     
+    # Load the stress model
     rf_model_loaded, scaler_loaded, label_encoder_loaded = stress_detection.load_stress_model_assets()
 
     try:
@@ -49,17 +50,22 @@ def main_logic(emit_frame, emit_metrics, should_stop):
             if roi.patches:
                 timeseries = series.get(roi.patches, timestamp)
                 if timeseries:
+                    # Find best signal
                     best_filt, pre_window, _, best_ts, best_fps, quality, _ = signal_processing.select_best_signal(timeseries)
+                    # Find HR HRV
                     last_hr, last_sdnn, last_rmssd, hrv_quality_status = signal_pipeline.process_hr_from_signal(
                         best_filt, best_ts, best_fps, quality
                     )
+                    # Find BR
                     last_br = breathing_pipeline.process_breathing(
                         best_filt, best_ts, best_fps, quality
                     )
                     
+                    # Append for testing purposes
                     if last_hr is not None: hr_data.append((timestamp, last_hr))
                     if last_br is not None: br_data.append((timestamp, last_br))
                     
+                    # To send to UI
                     metrics_data = {
                         "timestamp": timestamp,
                         "hr": {"value": last_hr, "unit": "bpm"},
@@ -77,6 +83,7 @@ def main_logic(emit_frame, emit_metrics, should_stop):
                         "cognitive": roi.blink
                     }
 
+                    # Stress detection
                     predicted_stress = None
                     if rf_model_loaded and all(v is not None for v in [last_hr, last_sdnn, last_rmssd]):
                         predicted_stress, _ = stress_detection.predict_stress(
@@ -101,6 +108,7 @@ def main_logic(emit_frame, emit_metrics, should_stop):
         capture.stop()
         print("Processing loop has finished")
 
+        # Save the data for testing purposes
         # Save HR data
         if hr_data:
             print(f"Saving {len(hr_data)} HR measurements to hr_data.txt")
