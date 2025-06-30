@@ -68,7 +68,8 @@ def main_logic(emit_frame, emit_metrics, should_stop):
                         "rmssd": {"value": last_rmssd, "unit": "ms"},
                         "stress": {"value": None, "unit": ""},
                         "rppg_signal": {"timestamps": best_ts, "values": pre_window},
-                        
+                        "quality_score": {"value": round(quality, 2)},
+
                         "fps": {"value": roi.fps},
                         "yaw": {"value": roi.thetas[0] if roi.thetas else None},
                         "pitch": {"value": roi.thetas[1] if roi.thetas else None},

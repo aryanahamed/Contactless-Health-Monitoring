@@ -191,13 +191,18 @@ class AppWindow(QMainWindow):
 
         fps_layout, self.fps_info_value_label = self._create_info_row("🎯 FPS:")
         self._setup_glow_effect(self.fps_info_value_label, subtle_glow_color, **subtle_glow_params)
+
+        quality_score_layout, self.quality_score_value_label = self._create_info_row("📊 Quality Score:")
+        self._setup_glow_effect(self.quality_score_value_label, subtle_glow_color, **subtle_glow_params)
+        main_layout.addLayout(fps_layout)
+        main_layout.addLayout(quality_score_layout)
+
         yaw_layout, self.yaw_info_value_label = self._create_info_row("↔️ Yaw:")
         self._setup_glow_effect(self.yaw_info_value_label, subtle_glow_color, **subtle_glow_params)
         pitch_layout, self.pitch_info_value_label = self._create_info_row("↕️ Pitch:")
         self._setup_glow_effect(self.pitch_info_value_label, subtle_glow_color, **subtle_glow_params)
         roll_layout, self.roll_info_value_label = self._create_info_row("🔄 Roll:")
         self._setup_glow_effect(self.roll_info_value_label, subtle_glow_color, **subtle_glow_params)
-        main_layout.addLayout(fps_layout)
         main_layout.addLayout(yaw_layout)
         main_layout.addLayout(pitch_layout)
         main_layout.addLayout(roll_layout)
@@ -496,12 +501,12 @@ class AppWindow(QMainWindow):
                 current_text = f"{value:.1f}" if isinstance(value, float) else str(value)
                 self._update_label_and_glow(value_label, current_text)
                 unit_label.setText(data.get("unit", ""))
-
+    
                 if key == "stress":
                     stress_color = {"Low Intensity": COLOR_ACCENT_SECONDARY, "Medium Intensity": COLOR_ACCENT_WARN, "High Intensity": COLOR_ACCENT_ALERT}.get(current_text, COLOR_TEXT_PRIMARY)
                     value_label.setStyleSheet(f"color: {stress_color};")
                     value_label.setFont(QFont("Segoe UI", 28 if current_text != "N/A" else 32, QFont.Weight.Bold))
-
+    
         sdnn_data = metrics_data.get("sdnn")
         if sdnn_data and sdnn_data.get("value") is not None and sdnn_data.get("value") != 0:
             self._update_label_and_glow(self.sdnn_info_value_label, f"{sdnn_data.get('value'):.1f} {sdnn_data.get('unit','')}")
@@ -509,16 +514,21 @@ class AppWindow(QMainWindow):
         rmssd_data = metrics_data.get("rmssd")
         if rmssd_data and rmssd_data.get("value") is not None and rmssd_data.get("value") != 0:
             self._update_label_and_glow(self.rmssd_info_value_label, f"{rmssd_data.get('value'):.1f} {rmssd_data.get('unit','')}")
-
+    
         if metrics_data.get("fps", {}).get("value") is not None:
             self._update_label_and_glow(self.fps_info_value_label, f"{metrics_data['fps']['value']:.1f}")
+
+        if metrics_data.get("quality_score", {}).get("value") is not None:
+            value = metrics_data["quality_score"]["value"]
+            self._update_label_and_glow(self.quality_score_value_label, f"{value}")
+
         if metrics_data.get("yaw", {}).get("value") is not None:
             self._update_label_and_glow(self.yaw_info_value_label, f"{metrics_data['yaw']['value']:.0f}°")
         if metrics_data.get("pitch", {}).get("value") is not None:
             self._update_label_and_glow(self.pitch_info_value_label, f"{metrics_data['pitch']['value']:.0f}°")
         if metrics_data.get("roll", {}).get("value") is not None:
             self._update_label_and_glow(self.roll_info_value_label, f"{metrics_data['roll']['value']:.0f}°")
-
+    
         cognitive_data = metrics_data.get("cognitive")
         if cognitive_data:
             blink_rate = cognitive_data.get("blink", {}).get("blink_pm", 0)
@@ -526,15 +536,15 @@ class AppWindow(QMainWindow):
             blink_count = cognitive_data.get("blink", {}).get("blink_count", None)
             if blink_count is not None:
                 self._update_label_and_glow(self.blink_count_info_value_label, str(blink_count))
-
+    
             cog_state = cognitive_data.get("cognitive", {})
             attn_level = cog_state.get("attention_level", "N/A")
             attn_score = cog_state.get("attention_score", 0.0)
             self._update_label_and_glow(self.attention_info_value_label, f"{attn_level} ({attn_score:.2f})")
-
+    
             details = cog_state.get("details", {})
             self._update_label_and_glow(self.gaze_info_value_label, f"{details.get('gaze_z', 0.0):.2f}")
-
+    
             status = cog_state.get("status", "N/A")
             if status == "establishing_baseline":
                 progress = cog_state.get("progress", 0.0)
