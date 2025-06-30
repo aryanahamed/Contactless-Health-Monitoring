@@ -10,6 +10,7 @@ from config import (
     BAND_MAX_HZ,
     DEFAULT_TARGET_FPS
 )
+# This is where we handle the entire signal processing pipeline for all algos
 
 def apply_windowing(signal, window_type='hann'):
     if signal is None or len(signal) == 0:
@@ -38,6 +39,7 @@ def handle_nan_values(rgb_data, timestamps):
 
 _FILTER_CACHE = {}
 def _get_butterworth_coeffs(low_cut_hz, high_cut_hz, fps, order=3):
+    # Cache filter coefficients
     key = (low_cut_hz, high_cut_hz, fps, order)
     if key not in _FILTER_CACHE:
         nyquist = 0.5 * fps
@@ -64,6 +66,7 @@ def apply_butterworth_bandpass(signal_buffer, low_cut_hz, high_cut_hz, fps, orde
 
 
 def calculate_signal_quality(filtered_signal, fps):
+    # SNR Calculation for signal quality
     if filtered_signal is None or len(filtered_signal) < MIN_SAMPLES_FOR_QUALITY or fps <= 0:
         return 0.0
 
@@ -104,9 +107,11 @@ def calculate_signal_quality(filtered_signal, fps):
         return 0.0
 
 def select_best_signal(input_data):
+    # Chooses best signal among POS, CHROM, and PBV(based on quality score)
     timestamps_np = np.asarray(input_data["timestamps"], dtype=np.float64)
     
     valid_regions = {}
+    # Primarily using forehead because always better accuracy than cheeks.
     for region in ["forehead"]:
         if region in input_data and len(input_data[region]) == len(timestamps_np):
             rgb_array = np.asarray(input_data[region], dtype=np.float64)
@@ -134,7 +139,6 @@ def select_best_signal(input_data):
         else:
             fps = DEFAULT_TARGET_FPS
         
-        # Using POS, CHROM and PBV
         for method_name, projection_func in [
             ("POS", apply_pos_projection),
             ("CHROM", apply_chrom_projection),
@@ -145,6 +149,7 @@ def select_best_signal(input_data):
             if signal is None:
                 continue
             
+            # Need pre windowed for plot
             pre_windowed = apply_butterworth_bandpass(signal, BAND_MIN_HZ, BAND_MAX_HZ, fps, order=3)
             if pre_windowed is None:
                 continue
@@ -157,10 +162,13 @@ def select_best_signal(input_data):
                 best_result = (filtered_signal, pre_windowed, cleaned_rgb, cleaned_timestamps, fps, quality_score)
                 best_method = f"{region}_{method_name}"
                 
+                # Early exit if quality is very high
                 if quality_score > 8.5:
                     break
         
+        # Early exit if we already have a very high quality signal
         if highest_quality > 8.5:
             break
-    
+        
+    # Unpacks best result values and returns with best method
     return (*best_result, best_method) if best_result else (None, None, None, None, None, -1.0, "none")

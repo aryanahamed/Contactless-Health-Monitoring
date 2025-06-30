@@ -3,6 +3,8 @@ import scipy.signal
 from numba import njit
 from config import MIN_SAMPLES_FOR_POS
 
+# CHROM is less sensitive to motion artifacts
+# Bad for varied skin tones
 @njit(cache=True)
 def _compute_chrom_core(normalized_rgb):
     n_samples = normalized_rgb.shape[0]
@@ -11,8 +13,10 @@ def _compute_chrom_core(normalized_rgb):
     
     for i in range(n_samples):
         r, g, b = normalized_rgb[i, 0], normalized_rgb[i, 1], normalized_rgb[i, 2]
-        X_chrom[i] = 3 * r - 2 * g
-        Y_chrom[i] = 1.5 * r + g - 1.5 * b
+        # Main Calculation 
+        # Linear combinations to extract chrominance signals
+        X_chrom[i] = 3 * r - 2 * g # 3R - 2G
+        Y_chrom[i] = 1.5 * r + g - 1.5 * b # 1.5R + G - 1.5B
     
     std_X = np.std(X_chrom)
     std_Y = np.std(Y_chrom)
@@ -22,6 +26,7 @@ def _compute_chrom_core(normalized_rgb):
     if std_Y == 0:
         return X_chrom
     
+    # Scale the contribution of Y_chrom to balance variances
     alpha = std_X / std_Y
     S_chrom = X_chrom - alpha * Y_chrom
     return S_chrom
@@ -37,9 +42,11 @@ def apply_chrom_projection(rgb_buffer):
     if np.any(np.std(rgb_buffer, axis=0) < 1e-6):
         return None
     
+    # Normalize
     normalized_rgb = rgb_buffer / mean_rgb
     raw_chrom_signal = _compute_chrom_core(normalized_rgb)
     
+    # Kill linear trend
     detrended_chrom_signal = scipy.signal.detrend(raw_chrom_signal, axis=0, overwrite_data=True)
 
     if detrended_chrom_signal is not None and np.std(detrended_chrom_signal) < 1e-8:

@@ -1,12 +1,15 @@
 import numpy as np
 from numba import njit
 import scipy.signal
-
+# PBV is robust to skin color variations.
+# High resource usage
 @njit(cache=True)
 def _pbv_core(normalized_rgb):
+    # Compute the principal direction of color variation
     cov_matrix = np.cov(normalized_rgb.T)
     eigvals, eigvecs = np.linalg.eig(cov_matrix)
     principal_direction = eigvecs[:, np.argmax(eigvals)]
+    # Project the normalized RGB values onto the principal direction
     pbv_signal = np.dot(normalized_rgb, principal_direction)
     return pbv_signal
 
@@ -18,6 +21,7 @@ def apply_pbv_projection(rgb_buffer):
     if np.any(mean_rgb <= 1e-10):
         return None
 
+    # Normalize
     normalized_rgb = rgb_buffer / mean_rgb
     normalized_rgb -= np.mean(normalized_rgb, axis=0)
 

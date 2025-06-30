@@ -32,6 +32,7 @@ def reset_all_filters():
 
 
 def reject_outliers(new_bpm, quality_score):
+    # Reject BPM values that are outliers
     global _last_timestamp, _last_valid_bpm
     
     if new_bpm is None or np.isnan(new_bpm):
@@ -49,7 +50,7 @@ def reject_outliers(new_bpm, quality_score):
     
     current_time = time.time()
 
-
+    # Limit sudden changes and reset if stuck too long
     if _last_timestamp is not None and _last_valid_bpm is not None:
         time_diff = current_time - _last_timestamp
         if time_diff > 0:
@@ -57,6 +58,7 @@ def reject_outliers(new_bpm, quality_score):
             actual_change = abs(new_bpm - _last_valid_bpm)
             stuck_duration = current_time - _last_timestamp
             
+            # Can tweek the values if needed
             if stuck_duration > 2.0 and quality_score > 3.0:
                 reset_all_filters()
             elif actual_change > max_allowed_change:
@@ -74,6 +76,7 @@ def _median_numba(arr):
     return np.median(arr)
 
 def add_to_median_filter(bpm_value):
+    # median filter
     global _median_buffer
 
     if bpm_value is None:
@@ -89,6 +92,7 @@ def _ema_numba(prev_ema, value, alpha):
     return alpha * value + (1 - alpha) * prev_ema
 
 def apply_exponential_smoothing(median_bpm):
+    # ema smoothing
     global _ema_value
 
     if median_bpm is None:
@@ -102,7 +106,8 @@ def apply_exponential_smoothing(median_bpm):
     return _ema_value
 
 def smooth_bpm_multi_stage(new_bpm, quality_score=1.0):
-    global _bpm_history, _quality_history    
+    # Main multi smoothing
+    global _bpm_history, _quality_history
     filtered_bpm = reject_outliers(new_bpm, quality_score)
     
     if filtered_bpm is not None:

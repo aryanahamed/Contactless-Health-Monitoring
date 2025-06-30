@@ -12,6 +12,7 @@ from config import (
     BAND_MIN_HZ,
     BAND_MAX_HZ,
 )
+# This is where we do the calculation of hr and hrv
 
 MIN_MAD_S = 0.005
 K_MAD_MULTIPLIER = 2.5
@@ -22,6 +23,7 @@ def _quadratic_interpolation(y_values, peak_index):
     if peak_index == 0 or peak_index == len(y_values) - 1:
         return float(peak_index)
 
+    # Doing this to ensure we have enough points for interpolation
     y_minus_1 = y_values[peak_index - 1]
     y_0 = y_values[peak_index]
     y_plus_1 = y_values[peak_index + 1]
@@ -31,6 +33,7 @@ def _quadratic_interpolation(y_values, peak_index):
 
 
 def calculate_hr_fft(filtered_signal, fps):
+    # Main Calculation
     if filtered_signal is None or len(filtered_signal) < 128:
         return None
         
@@ -39,10 +42,9 @@ def calculate_hr_fft(filtered_signal, fps):
     
     try:
         nperseg = len(filtered_signal)
-        
         freqs, psd = scipy.signal.welch(
-            filtered_signal, 
-            fs=fps, 
+            filtered_signal,
+            fs=fps,
             nperseg=nperseg,
             window='hann'
         )
@@ -62,12 +64,13 @@ def calculate_hr_fft(filtered_signal, fps):
         
         interp_peak_idx = _quadratic_interpolation(valid_psd, peak_idx_in_valid)
         
+        # Quadratic interpolation
         if interp_peak_idx > 0 and interp_peak_idx < len(valid_freqs) - 1:
             f1, f2 = valid_freqs[int(interp_peak_idx)], valid_freqs[int(interp_peak_idx) + 1]
             dominant_freq_hz = f1 + (f2 - f1) * (interp_peak_idx - int(interp_peak_idx))
         else:
             dominant_freq_hz = valid_freqs[peak_idx_in_valid]
-
+        
         estimated_hr_bpm = dominant_freq_hz * 60.0
         
         if 40 <= estimated_hr_bpm <= 180:
@@ -82,21 +85,23 @@ def calculate_hr_fft(filtered_signal, fps):
 
 
 def find_signal_peaks(filtered_signal, target_fps, expected_hr_bpm=None):
+    # Detect peaks in the filtered signal (also optionally uses expected hr) for hrv
     if filtered_signal is None or filtered_signal.size == 0:
         return None
 
     if target_fps <= 0:
-        return None    
+        return None
     if expected_hr_bpm is not None and 40 <= expected_hr_bpm <= 180:
         expected_period_sec = 60.0 / expected_hr_bpm
         min_distance_samples = max(1, int(target_fps * expected_period_sec * 0.7))
     else:
-        min_distance_samples = max(1, int(target_fps / MAX_HR_HZ))    
+        min_distance_samples = max(1, int(target_fps / MAX_HR_HZ))
     signal_std = np.std(filtered_signal)
     
     if signal_std == 0:
         return None
     
+    # thresholds
     prominence_threshold = signal_std * 0.2
     height_threshold = signal_std * 0.1
     
@@ -111,6 +116,8 @@ def find_signal_peaks(filtered_signal, target_fps, expected_hr_bpm=None):
 
 @njit(cache=True)
 def _calculate_hrv_core(ibis_sec_final):
+    # Main HRV calulation
+    # Avoids extremely small inconsistent values
     HRV_VALUE_TOLERANCE = 1e-9
     mean_ibi_sec = np.mean(ibis_sec_final)
     sdnn_ms = np.std(ibis_sec_final) * 1000.0
@@ -137,6 +144,7 @@ def calculate_hrv(peak_timestamps):
     if ibis_sec.size < MIN_PEAKS_FOR_HRV - 1:
         return None
 
+    # Physiological filtering
     valid_mask_physio = (ibis_sec >= MIN_VALID_IBI_S) & (ibis_sec <= MAX_VALID_IBI_S)
     ibis_sec_physio = ibis_sec[valid_mask_physio]
     if ibis_sec_physio.size < MIN_PEAKS_FOR_HRV - 1:
@@ -148,6 +156,7 @@ def calculate_hrv(peak_timestamps):
     if np.isnan(mad_ibi_calculated):
         ibis_sec_final = ibis_sec_physio
     else:
+        # Statistical outlier filtering using MAD
         mad_ibi_for_filtering = max(mad_ibi_calculated, MIN_MAD_S)
         lower_bound = max(median_ibi - K_MAD_MULTIPLIER * mad_ibi_for_filtering, MIN_VALID_IBI_S)
         upper_bound = min(median_ibi + K_MAD_MULTIPLIER * mad_ibi_for_filtering, MAX_VALID_IBI_S)

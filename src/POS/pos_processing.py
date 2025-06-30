@@ -3,6 +3,8 @@ import scipy.signal
 from numba import njit
 from config import MIN_SAMPLES_FOR_POS
 
+# Pos is less sensitive to lighting variations.
+# Bad for motion
 @njit(cache=True)
 def _compute_pos_core(normalized_rgb):
     n_samples = normalized_rgb.shape[0]
@@ -10,6 +12,7 @@ def _compute_pos_core(normalized_rgb):
     Y = np.empty(n_samples, dtype=np.float32)
     
     for i in range(n_samples):
+        # Main Calculation
         X[i] = normalized_rgb[i, 1] - normalized_rgb[i, 2]  # G - B
         Y[i] = normalized_rgb[i, 1] + normalized_rgb[i, 2] - 2 * normalized_rgb[i, 0]  # G + B - 2R
     
@@ -19,6 +22,7 @@ def _compute_pos_core(normalized_rgb):
     if std_Y == 0:
         return None
     
+    # Alpha balances the contribution of Y
     alpha = std_X / std_Y
     S = X + alpha * Y
     return S
@@ -34,9 +38,11 @@ def apply_pos_projection(rgb_buffer):
     if np.any(np.std(rgb_buffer, axis=0) < 1e-6):
         return None
     
+    # Normalize
     normalized_rgb = rgb_buffer / mean_rgb
     raw_pos_signal = _compute_pos_core(normalized_rgb)
     
+    # Remove linear trend
     detrended_pos_signal = scipy.signal.detrend(raw_pos_signal, axis=0, overwrite_data=True)
 
     if detrended_pos_signal is not None and np.std(detrended_pos_signal) < 1e-8:

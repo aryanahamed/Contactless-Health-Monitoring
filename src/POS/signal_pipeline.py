@@ -3,19 +3,21 @@ from POS.signal_extraction import (
     calculate_hr_fft, find_signal_peaks, calculate_hrv
 )
 from POS.smoothing import smooth_bpm_multi_stage, get_current_smoothed_bpm
+# This is where we process the hr and hrv with smoothing.
 
 def process_hr_from_signal(best_filt, best_ts, best_fps, quality):
     last_sdnn = last_rmssd = None
     hrv_quality_status = 'N/A'
     fft_hr = None
     
-    if best_filt is not None:        
+    if best_filt is not None:
         fft_hr = calculate_hr_fft(best_filt, best_fps)
         peaks_tuple = find_signal_peaks(best_filt, best_fps, fft_hr)
 
         peaks_ts = None
         if peaks_tuple:
             peaks_indices = peaks_tuple[0]
+            # Map peak indices to timestamps
             peaks_ts = best_ts[peaks_indices] if best_ts is not None else None
             
         hr_hrv_results = calculate_hrv(peaks_ts)
@@ -25,6 +27,7 @@ def process_hr_from_signal(best_filt, best_ts, best_fps, quality):
             hrv_quality_status = hr_hrv_results.get('hrv_quality', 'N/A')
 
     if fft_hr is not None:
+        # smoothing
         smoothed_hr = smooth_bpm_multi_stage(fft_hr, quality)
     else:
         smoothed_hr = get_current_smoothed_bpm()
@@ -32,6 +35,7 @@ def process_hr_from_signal(best_filt, best_ts, best_fps, quality):
     return smoothed_hr, last_sdnn, last_rmssd, hrv_quality_status
 
 
+# Not used for now.
 def process_hr(series):
     best_filt, _, best_ts, best_fps, quality, hr_signal = select_best_signal(series)
     smoothed_hr, last_sdnn, last_rmssd, hrv_quality_status = process_hr_from_signal(
