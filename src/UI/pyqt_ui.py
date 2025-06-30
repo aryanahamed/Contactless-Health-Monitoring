@@ -307,6 +307,7 @@ class AppWindow(QMainWindow):
         return status_group_box
 
     def _setup_glow_effect(self, widget, glow_color_hex, blur_radius=20, duration=800):
+        # Temporary glow animation to a widget
         effect = QGraphicsDropShadowEffect(widget)
         effect.setOffset(0, 0)
         effect.setBlurRadius(blur_radius)
@@ -326,6 +327,7 @@ class AppWindow(QMainWindow):
         widget.glow_animation = animation
 
     def _update_label_and_glow(self, label, new_text):
+        # Updates label text and triggers glow animation if value changed
         new_text_str = str(new_text)
         if label.text() != new_text_str:
             label.setText(new_text_str)
@@ -492,6 +494,7 @@ class AppWindow(QMainWindow):
         
     @pyqtSlot(dict)
     def process_new_data_point(self, data_point):
+        # updates UI and status
         self.update_metrics(data_point)
         
         hr_val = data_point.get("hr", {}).get("value")
@@ -504,6 +507,7 @@ class AppWindow(QMainWindow):
         
     @pyqtSlot(dict)
     def update_metrics(self, metrics_data):
+        # Updates all metric labels and triggers glow for changed values
         metric_map = {
             "hr": (self.hr_value_label, self.hr_unit_label),
             "br": (self.br_value_label, self.br_unit_label),
@@ -521,10 +525,12 @@ class AppWindow(QMainWindow):
                 unit_label.setText(data.get("unit", ""))
     
                 if key == "stress":
+                    # Change color for stress level
                     stress_color = {"Low Intensity": COLOR_ACCENT_SECONDARY, "Medium Intensity": COLOR_ACCENT_WARN, "High Intensity": COLOR_ACCENT_ALERT}.get(current_text, COLOR_TEXT_PRIMARY)
                     value_label.setStyleSheet(f"color: {stress_color};")
                     value_label.setFont(QFont("Segoe UI", 20 if current_text != "N/A" else 24, QFont.Weight.Bold))
     
+        # HRV metrics
         sdnn_data = metrics_data.get("sdnn")
         if sdnn_data and sdnn_data.get("value") is not None and sdnn_data.get("value") != 0:
             self._update_label_and_glow(self.sdnn_info_value_label, f"{sdnn_data.get('value'):.1f} {sdnn_data.get('unit','')}")
@@ -533,13 +539,14 @@ class AppWindow(QMainWindow):
         if rmssd_data and rmssd_data.get("value") is not None and rmssd_data.get("value") != 0:
             self._update_label_and_glow(self.rmssd_info_value_label, f"{rmssd_data.get('value'):.1f} {rmssd_data.get('unit','')}")
     
+        # Signal/pose metrics
         if metrics_data.get("fps", {}).get("value") is not None:
             self._update_label_and_glow(self.fps_info_value_label, f"{metrics_data['fps']['value']:.1f}")
-
+    
         if metrics_data.get("quality_score", {}).get("value") is not None:
             value = metrics_data["quality_score"]["value"]
             self._update_label_and_glow(self.quality_score_value_label, f"{value}")
-
+    
         if metrics_data.get("yaw", {}).get("value") is not None:
             self._update_label_and_glow(self.yaw_info_value_label, f"{metrics_data['yaw']['value']:.0f}°")
         if metrics_data.get("pitch", {}).get("value") is not None:
@@ -547,6 +554,7 @@ class AppWindow(QMainWindow):
         if metrics_data.get("roll", {}).get("value") is not None:
             self._update_label_and_glow(self.roll_info_value_label, f"{metrics_data['roll']['value']:.0f}°")
     
+        # Cognitive metrics
         cognitive_data = metrics_data.get("cognitive")
         if cognitive_data:
             blink_rate = cognitive_data.get("blink", {}).get("blink_pm", 0)
@@ -565,6 +573,7 @@ class AppWindow(QMainWindow):
     
             status = cog_state.get("status", "N/A")
             if status == "establishing_baseline":
+                # Show progress of cog status
                 progress = cog_state.get("progress", 0.0)
                 self._update_label_and_glow(self.cognitive_status_info_value_label, f"Baseline ({progress:.0%})")
             else:
@@ -582,6 +591,7 @@ class AppWindow(QMainWindow):
 
     @pyqtSlot(dict)
     def apply_plot_data(self, plot_data):
+        # Receives new plot data from worker and updates all plots
         try:
             rppg_times, rppg_values = plot_data.get('rppg_signal_data', (np.array([]), np.array([])))
             hr_times, hr_values = plot_data['hr_data']
@@ -589,7 +599,7 @@ class AppWindow(QMainWindow):
             sdnn_times, sdnn_values = plot_data['sdnn_data']
             rmssd_times, rmssd_values = plot_data['rmssd_data']
             current_elapsed_time = plot_data['current_time']
-
+    
             self.rppg_signal_curve.setData(rppg_times, rppg_values)
             if rppg_times.size > 1:
                 self.rppg_plot_widget.setXRange(rppg_times[0], rppg_times[-1])
@@ -598,11 +608,12 @@ class AppWindow(QMainWindow):
             self.br_curve.setData(br_times, br_values)
             self.sdnn_curve.setData(sdnn_times, sdnn_values)
             self.rmssd_curve.setData(rmssd_times, rmssd_values)
-
+    
             if hr_times.size > 0:
+                # Keep time window for plots at last 30 seconds
                 view_end_time = current_elapsed_time + 1
                 view_start_time = max(0, view_end_time - 30)
-
+    
                 for plot in [self.hr_plot_widget, self.br_plot_widget, self.hrv_plot_widget]:
                     plot.getPlotItem().setXRange(view_start_time, view_end_time, padding=0)
                     

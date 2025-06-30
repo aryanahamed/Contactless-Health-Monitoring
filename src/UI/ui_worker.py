@@ -15,6 +15,7 @@ class ProcessingWorker(QThread):
         self.logic_function(
             emit_frame=self.new_frame.emit,
             emit_metrics=self.new_metrics.emit,
+            # logic function to check if the thread should stop
             should_stop=lambda: not self._is_running
         )
         print("Worker thread finished")
@@ -48,8 +49,10 @@ class PlotUpdateWorker(QThread):
                 return
 
             if self.start_time is None:
+                # Start start_time with the timestamp of the first data point
                 self.start_time = timestamp
 
+            # store each value with timestamp
             hr_val = data_point.get("hr", {}).get("value")
             if hr_val is not None:
                 self.hr_history.append((timestamp, hr_val))
@@ -66,6 +69,7 @@ class PlotUpdateWorker(QThread):
             if rmssd_val is not None and rmssd_val != 0:
                 self.rmssd_history.append((timestamp, rmssd_val))
             
+            # prepare data for plotting and emit to UI
             plot_data = self._process_plot_arrays(data_point)
             
             self.plot_data_ready.emit(plot_data)
@@ -78,6 +82,7 @@ class PlotUpdateWorker(QThread):
             if not data_list:
                 return np.array([]), np.array([])
             
+            # Normalize times for plotting
             times = np.array([item[0] for item in data_list]) - self.start_time
             values = np.array([item[1] for item in data_list])
             return times, values
@@ -86,14 +91,17 @@ class PlotUpdateWorker(QThread):
         rppg_times, rppg_values = (np.array([]), np.array([]))
         if rppg_signal_data and rppg_signal_data.get("timestamps") is not None:
             if rppg_signal_data["timestamps"] is not None and rppg_signal_data["values"] is not None:
+                # Convert rPPG signal timestamps to elapsed time
                 rppg_times = np.array(rppg_signal_data["timestamps"]) - self.start_time
                 rppg_values = np.array(rppg_signal_data["values"])
 
+        # Prepare arrays for each metric for plotting
         hr_times, hr_values = get_plot_arrays(self.hr_history)
         br_times, br_values = get_plot_arrays(self.br_history)
         sdnn_times, sdnn_values = get_plot_arrays(self.sdnn_history)
         rmssd_times, rmssd_values = get_plot_arrays(self.rmssd_history)
         
+        # Use last HR time as the current elapsed time or 0 if no data
         current_elapsed_time = hr_times[-1] if hr_times.size > 0 else 0
         
         return {
