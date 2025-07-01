@@ -67,7 +67,39 @@ def predict_stress(hr, sdnn, rmssd, model, scaler, label_encoder):
     
     predicted_probabilities = model.predict_proba(current_features_scaled)
     
+    # confidence score for the prediction
+    predicted_class_index = model.predict(current_features_scaled)[0]
+    confidence_score = predicted_probabilities[0][predicted_class_index]
+    
+    # Format prediction with confidence score
+    formatted_prediction = f"{predicted_condition_name} (Conf. {confidence_score:.2f})"
+    
     # Use the following to show probabilities for each class
     class_probs = dict(zip(label_encoder.classes_, predicted_probabilities[0]))
     
-    return predicted_condition_name, class_probs
+    return formatted_prediction, class_probs, confidence_score
+
+
+from collections import deque
+
+# Store the predictions
+prediction_history = deque(maxlen=15)
+
+def predict_stress_with_smoothing(hr, sdnn, rmssd, model, scaler, label_encoder):
+    raw_prediction, class_probs, confidence = predict_stress(hr, sdnn, rmssd, model, scaler, label_encoder)
+    
+    if raw_prediction is None:
+        return None, None, None
+    
+    prediction_history.append((raw_prediction, class_probs, confidence))
+    
+    # majority voting
+    if len(prediction_history) >= 15:
+        predictions = [p[0].split(' (')[0] for p in prediction_history]  # Removing confidence part
+        most_common = max(set(predictions), key=predictions.count)
+        
+        avg_confidence = np.mean([p[2] for p in prediction_history if p[0].split(' (')[0] == most_common])
+        
+        return f"{most_common} (Conf. {avg_confidence:.2f})", class_probs, avg_confidence
+    
+    return raw_prediction, class_probs, confidence

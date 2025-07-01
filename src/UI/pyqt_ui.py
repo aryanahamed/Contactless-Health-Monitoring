@@ -14,7 +14,7 @@ from UI.ui_worker import ProcessingWorker, PlotUpdateWorker
 # from ui_worker import ProcessingWorker, PlotUpdateWorker
 
 # Change these colors to change the app's look
-COLOR_BACKGROUND = "#1F2227"
+COLOR_BACKGROUND = "#1C1E20"
 COLOR_CONTENT_BACKGROUND = "#1e1f24"
 COLOR_TEXT_PRIMARY = "#f5f6fa"
 COLOR_TEXT_SECONDARY = "#dcdde1"
@@ -150,16 +150,16 @@ class AppWindow(QMainWindow):
         right_column_layout.addWidget(self.br_plot_widget, stretch=1)
 
         self.main_layout.addWidget(left_column_widget, stretch=1)
-        self.main_layout.addWidget(right_column_widget, stretch=2)
+        self.main_layout.addWidget(right_column_widget, stretch=3)
 
     def _create_info_row(self, label_text):
         row_layout = QHBoxLayout()
         label = QLabel(label_text)
-        label.setFont(QFont("Segoe UI", 9))
+        label.setFont(QFont("Segoe UI", 10))
         label.setStyleSheet(f"color: {COLOR_TEXT_SECONDARY};")
 
         value_label = QLabel("N/A")
-        value_label.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        value_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
         value_label.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY};")
         value_label.setAlignment(Qt.AlignmentFlag.AlignRight)
 
@@ -176,7 +176,7 @@ class AppWindow(QMainWindow):
 
     def _create_info_subheader(self, text):
         label = QLabel(text)
-        font = QFont("Segoe UI", 8, QFont.Weight.Bold)
+        font = QFont("Segoe UI", 9, QFont.Weight.Bold)
         font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1)
         label.setFont(font)
         label.setStyleSheet(f"""
@@ -197,13 +197,13 @@ class AppWindow(QMainWindow):
         main_layout.setSpacing(8)
 
         title_label = QLabel("Info Panel")
-        title_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        title_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
         title_label.setStyleSheet(f"color: {COLOR_ACCENT_PRIMARY};")
         main_layout.addWidget(title_label)
         main_layout.addSpacing(5)
 
         subtle_glow_color = COLOR_TEXT_SECONDARY
-        subtle_glow_params = {'blur_radius': 15, 'duration': 600}
+        subtle_glow_params = {'blur_radius': 20, 'duration': 700}
 
         # HRV METRICS
         main_layout.addWidget(self._create_info_subheader("HEART RATE VARIABILITY"))
@@ -548,8 +548,8 @@ class AppWindow(QMainWindow):
                 unit_label.setText(data.get("unit", ""))
     
                 if key == "stress":
-                    # Change color for stress level
-                    stress_color = {"Low Intensity": COLOR_ACCENT_SECONDARY, "Medium Intensity": COLOR_ACCENT_WARN, "High Intensity": COLOR_ACCENT_ALERT}.get(current_text, COLOR_TEXT_PRIMARY)
+                    stress_level = current_text.split(" (Conf.")[0] if " (Conf." in current_text else current_text
+                    stress_color = {"Low Intensity": COLOR_ACCENT_SECONDARY, "Medium Intensity": COLOR_ACCENT_WARN, "High Intensity": COLOR_ACCENT_ALERT}.get(stress_level, COLOR_TEXT_PRIMARY)
                     value_label.setStyleSheet(f"color: {stress_color};")
                     value_label.setFont(QFont("Segoe UI", 19 if current_text != "N/A" else 23, QFont.Weight.Bold))
     

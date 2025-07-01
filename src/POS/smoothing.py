@@ -15,7 +15,7 @@ OUTLIER_WINDOW_SIZE = 8
 MEDIAN_WINDOW_SIZE = 7
 EMA_ALPHA = 0.2  # More smoothing = lower alpha
 MAX_BPM_CHANGE_PER_SEC = 4
-MIN_QUALITY_THRESHOLD = 1.7
+MIN_QUALITY_THRESHOLD = 1.9
 PHYSIO_MIN_BPM = 40
 PHYSIO_MAX_BPM = 180
 MIN_MAD_FOR_Z_SCORE_CALC = 0.5
@@ -39,7 +39,7 @@ def reject_outliers(new_bpm, quality_score, current_smoothed_bpm):
         return None
     
     is_establishing_baseline = len(_bpm_history) == 0
-    required_quality = 2.5 if is_establishing_baseline else MIN_QUALITY_THRESHOLD
+    required_quality = 3.0 if is_establishing_baseline else MIN_QUALITY_THRESHOLD
 
     if quality_score < required_quality:
         return None
