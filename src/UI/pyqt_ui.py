@@ -233,10 +233,10 @@ class AppWindow(QMainWindow):
         self._setup_glow_effect(self.blink_count_info_value_label, subtle_glow_color, **subtle_glow_params)
         attention_info_layout, self.attention_info_value_label = self._create_info_row("🧠 Attention:")
         self._setup_glow_effect(self.attention_info_value_label, subtle_glow_color, **subtle_glow_params)
-        gaze_layout, self.gaze_info_value_label = self._create_info_row("👀 Gaze (Z):")
+        gaze_layout, self.gaze_info_value_label = self._create_info_row("👀 Gaze:")
         self._setup_glow_effect(self.gaze_info_value_label, subtle_glow_color, **subtle_glow_params)
-        cognitive_status_layout, self.cognitive_status_info_value_label = self._create_info_row("🧩 Cognitive Status:")
-        self._setup_glow_effect(self.cognitive_status_info_value_label, subtle_glow_color, **subtle_glow_params)
+        cognitive_status_layout, self.gaze_status_info_value_label = self._create_info_row("🧩 Gaze State:")
+        self._setup_glow_effect(self.gaze_status_info_value_label, subtle_glow_color, **subtle_glow_params)
         main_layout.addLayout(blink_layout)
         main_layout.addLayout(blink_count_layout)
         main_layout.addLayout(attention_info_layout)
@@ -411,7 +411,7 @@ class AppWindow(QMainWindow):
         self.blink_count_info_value_label.setText("N/A")
         self.attention_info_value_label.setText("N/A")
         self.gaze_info_value_label.setText("N/A")
-        self.cognitive_status_info_value_label.setText("N/A")
+        self.gaze_status_info_value_label.setText("N/A")
 
         self.stress_value_label.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY};")
         self.stress_value_label.setFont(QFont("Segoe UI", 24, QFont.Weight.Bold))
@@ -507,6 +507,7 @@ class AppWindow(QMainWindow):
         
     @pyqtSlot(dict)
     def update_metrics(self, metrics_data):
+        # Data is handled here 
         # Updates all metric labels and triggers glow for changed values
         metric_map = {
             "hr": (self.hr_value_label, self.hr_unit_label),
@@ -557,27 +558,34 @@ class AppWindow(QMainWindow):
         # Cognitive metrics
         cognitive_data = metrics_data.get("cognitive")
         if cognitive_data:
-            blink_rate = cognitive_data.get("blink", {}).get("blink_pm", 0)
-            self._update_label_and_glow(self.blink_info_value_label, f"{blink_rate:.1f} /min")
-            blink_count = cognitive_data.get("blink", {}).get("blink_count", None)
-            if blink_count is not None:
-                self._update_label_and_glow(self.blink_count_info_value_label, str(blink_count))
-    
-            cog_state = cognitive_data.get("cognitive", {})
-            attn_level = cog_state.get("attention_level", "N/A")
-            attn_score = cog_state.get("attention_score", 0.0)
-            self._update_label_and_glow(self.attention_info_value_label, f"{attn_level} ({attn_score:.2f})")
-    
-            details = cog_state.get("details", {})
-            self._update_label_and_glow(self.gaze_info_value_label, f"{details.get('gaze_z', 0.0):.2f}")
-    
-            status = cog_state.get("status", "N/A")
-            if status == "establishing_baseline":
-                # Show progress of cog status
-                progress = cog_state.get("progress", 0.0)
-                self._update_label_and_glow(self.cognitive_status_info_value_label, f"Baseline ({progress:.0%})")
+            blinks = cognitive_data.get("blinks", {})
+            blink_rate = blinks.get("bpm", 0)
+            if isinstance(blink_rate, float):
+                blink_rate_str = f"{blink_rate:.1f}"
             else:
-                self._update_label_and_glow(self.cognitive_status_info_value_label, status.replace("_", " ").title())
+                blink_rate_str = str(blink_rate)
+            self._update_label_and_glow(self.blink_info_value_label, blink_rate_str)
+            blink_count = blinks.get("count", None)
+            if blink_count is not None:
+                self._update_label_and_glow(self.blink_count_info_value_label, blink_count)
+
+            attention = cognitive_data.get("attention", None)
+            if attention is not None:
+                try:
+                    attention_val = float(attention)
+                    attention_str = f"{attention_val:.1f}"
+                except (ValueError, TypeError):
+                    attention_str = str(attention)
+                self._update_label_and_glow(self.attention_info_value_label, attention_str)
+
+            gaze = cognitive_data.get("gaze", None)
+            if gaze and isinstance(gaze, (list, tuple)) and len(gaze) > 2:
+                gaze_str = f"{gaze[0]:.2f}, {gaze[1]:.2f}, {gaze[2]:.2f}"
+                self._update_label_and_glow(self.gaze_info_value_label, gaze_str)
+
+            gaze_state = cognitive_data.get("gaze_state", None)
+            if gaze_state is not None:
+                self._update_label_and_glow(self.gaze_status_info_value_label, gaze_state)
 
     @pyqtSlot(str, object, object)
     def update_status(self, status="monitoring", avg_hr=None, avg_br=None):

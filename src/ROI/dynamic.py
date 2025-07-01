@@ -2,7 +2,6 @@ import math
 from config import roi_indices
 import numpy as np
 import cv2
-from functools import lru_cache
 from ROI.stabilization import ema
 from ROI.expressions import Expression
 
@@ -13,9 +12,9 @@ def euler_angles(t_matrix):
     if t_matrix is None or t_matrix.size <2:
         return 0,0,0
 
-    yaw   = math.atan2(t_matrix[2, 0], t_matrix[0, 0])           # ← face sideways
-    pitch = math.atan2(t_matrix[2, 1], t_matrix[2, 2])            # ← face look up or down
-    roll  = math.atan2(t_matrix[1, 0], t_matrix[0, 0])            # ← face tilt to shoulder
+    yaw   = math.atan2(t_matrix[2, 0], t_matrix[0, 0])           #face sideways
+    pitch = math.atan2(t_matrix[2, 1], t_matrix[2, 2])            #face look up or down
+    roll  = math.atan2(t_matrix[1, 0], t_matrix[0, 0])            #face tilt to shoulder
 
     return math.degrees(yaw),-math.degrees(pitch), math.degrees(roll)
 
@@ -91,8 +90,6 @@ def extract_patches(frame, roi_dict, weights):
     return results
 
 
-
-@lru_cache(maxsize=128)
 def remove_euler(e_angle):
     yaw, pitch, roll = tuple(e_angle)
     to_remove = set()
@@ -110,8 +107,8 @@ def remove_euler(e_angle):
 
 def is_occluded(frame_crop):
     ycrcb = cv2.cvtColor(frame_crop, cv2.COLOR_BGR2YCrCb)
-    low = np.array([0, 133, 77], dtype=np.uint8)
-    upper = np.array([255, 173, 127], dtype=np.uint8)
+    low = np.array([0, 125, 70], dtype=np.uint8) ##these are taken from papers
+    upper = np.array([255, 180, 135], dtype=np.uint8)#using slightly wider range
     skin_maMsk = cv2.inRange(ycrcb, low, upper)
     skin_pixels = cv2.countNonZero(skin_maMsk)
     total_pixels = frame_crop.shape[0] * frame_crop.shape[1]

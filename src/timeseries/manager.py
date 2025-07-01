@@ -2,13 +2,12 @@ import config
 import numpy as np
 from timeseries.interpol import get_uniform
 
-
 class TimeSeries:
     def __init__(self):
         self.regions = config.regions
         self.max_samples = config.buffer_size
 
-        # Circular buffers
+        # Circular buffers, overkill honestly every ms counts, mediapipe already taking a toll
         self.times = np.full(self.max_samples, np.nan, dtype=np.float64)
         self.data = {r: np.full((self.max_samples, 3), np.nan, dtype=np.float32) for r in self.regions}
         self.weights = {r: np.full(self.max_samples, np.nan, dtype=np.float32) for r in self.regions}
@@ -22,7 +21,9 @@ class TimeSeries:
         #cache
         self._nan_rgb = np.array([np.nan, np.nan, np.nan], dtype=np.float32)
 
-    def get(self, roi_patch, timestamp):
+    def add(self, roi_patch, timestamp):
+        if not roi_patch:
+            return
         #store the frame data
         self.times[self.next_slot] = timestamp
 
@@ -40,6 +41,7 @@ class TimeSeries:
         self.next_slot = (self.next_slot + 1) % self.max_samples
         self.num_samples = min(self.num_samples + 1, self.max_samples)
 
+    def get(self):
         if self.num_samples < 2:
             return None
 

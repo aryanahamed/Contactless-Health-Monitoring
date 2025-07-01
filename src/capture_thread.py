@@ -2,23 +2,29 @@ import threading
 import queue
 import cv2
 import time
-import psutil
+import os
 
 
 class CaptureThread:
     # not sure if to not limit queue size, might cause series memory issues
-    def __init__(self,camera_id = 0, debug=False):
+    ###using big mem for dataset loading only
+    def __init__(self, camera_id=0, debug=False):
+        self.camera_source = camera_id
+        self.is_video_file = isinstance(self.camera_source, str)
         # initialize the thread
-        self.cap = cv2.VideoCapture(camera_id)
+        if os.name == 'nt' and not self.is_video_file:  # Windows - use DirectShow for reliability ONLY WHEN LIVE CAMERA
+            self.cap = cv2.VideoCapture(camera_id, cv2.CAP_DSHOW)
+        else:
+            self.cap = cv2.VideoCapture(camera_id)
+
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         if not self.cap.isOpened():
             raise IOError
         self.use_video = isinstance(camera_id, str)  # vid
-        self.queue = queue.Queue(maxsize=2000)
+        self.queue = queue.Queue(maxsize=2000) ##set this to one in windows,driver is shit
         self.running = threading.Event()
         self.thread = threading.Thread(target=self._capture_loop, daemon=True)  # daemon true just allows main to exit
         self.debug = debug
-
 
     def start(self):
         self.running.set()
@@ -32,6 +38,8 @@ class CaptureThread:
     def _capture_loop(self):
 
         while self.running.is_set():
+            start = time.perf_counter()
+
             success, frame = self.cap.read()
 
             if not success:
@@ -49,6 +57,8 @@ class CaptureThread:
                 pass
 
             self._debug_print()
+
+    ###for dataset testing only using this
     def _check_video_end(self):
         current = self.cap.get(cv2.CAP_PROP_POS_FRAMES)
         total = self.cap.get(cv2.CAP_PROP_FRAME_COUNT)
@@ -57,13 +67,14 @@ class CaptureThread:
             return True
         return False
 
-
     def _get_timestamp(self):
         if self.use_video:
             return self.cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
         return time.perf_counter()
 
+    ##for debugiing the mem n queue size
     def _debug_print(self):
+        import psutil
         if self.debug and psutil:
             mem_mb = psutil.Process().memory_info().rss / (1024 ** 2)
             print(f"[CaptureThread] Queue={self.queue.qsize()}  Mem={mem_mb:.1f}MB")
@@ -74,7 +85,7 @@ class CaptureThread:
         except queue.Empty:
             return None, None
 
-
+"""
 def wait_for_startup(capture_thread, delay_sec=3):
     start_time = time.time()
     while True:
@@ -100,5 +111,5 @@ def wait_for_startup(capture_thread, delay_sec=3):
             with capture_thread.lock:
                 capture_thread.deque.clear()
             return
-
+"""
 

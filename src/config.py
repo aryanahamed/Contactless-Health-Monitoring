@@ -27,22 +27,31 @@ buffer_size = (hz * window) + 5
 regions = ["forehead", "left_cheek", "right_cheek"]
 
 #sorted index wise
-blend_keys=\
-[
-    "browDownLeft","browDownRight","browInnerUp","browOuterUpLeft","browOuterUpRight",
-    "cheekPuff","cheekSquintLeft","cheekSquintRight",
-    "eyeBlinkLeft","eyeBlinkRight","eyeLookDownLeft","eyeLookDownRight",
-    "eyeLookInLeft","eyeLookInRight","eyeLookOutLeft","eyeLookOutRight",
-    "eyeLookUpLeft","eyeLookUpRight","eyeSquintLeft","eyeSquintRight",
-    "eyeWideLeft","eyeWideRight",
-    "jawForward","jawLeft","jawOpen","jawRight",
-    "mouthClose","mouthDimpleLeft","mouthDimpleRight","mouthFrownLeft","mouthFrownRight",
-    "mouthFunnel","mouthLeft","mouthLowerDownLeft","mouthLowerDownRight",
-    "mouthPressLeft","mouthPressRight","mouthPucker","mouthRight",
-    "mouthRollLower","mouthRollUpper","mouthShrugLower","mouthShrugUpper",
-    "mouthSmileLeft","mouthSmileRight","mouthStretchLeft","mouthStretchRight",
-    "mouthUpperUpLeft","mouthUpperUpRight",
-    "noseSneerLeft","noseSneerRight","tongueOut"
+needed_blendshapes = [
+    "browDownLeft",        # 0 - stress
+    "browDownRight",       # 1 - stress
+    "browInnerUp",         # 2 - stress/concentration + forehead ROI
+    "browOuterUpLeft",     # 3 - forehead ROI
+    "browOuterUpRight",    # 4 - forehead ROI
+    "cheekPuff",           # 5 - cheek ROI
+    "cheekSquintLeft",     # 6 - cheek ROI
+    "cheekSquintRight",    # 7 - cheek ROI
+    "eyeBlinkLeft",        # 8 - blink
+    "eyeBlinkRight",       # 9 - blink
+    "eyeLookDownLeft",     # 10 - eye gaze vertical
+    "eyeLookDownRight",    # 11 - eye gaze vertical
+    "eyeLookInLeft",       # 12 - eye gaze horizontal
+    "eyeLookInRight",      # 13 - eye gaze horizontal
+    "eyeLookOutLeft",      # 14 - eye gaze horizontal
+    "eyeLookOutRight",     # 15 - eye gaze horizontal
+    "eyeLookUpLeft",       # 16 - eye gaze vertical
+    "eyeLookUpRight",      # 17 - eye gaze vertical
+    "eyeSquintLeft",       # 18 - stress/eye opening
+    "eyeSquintRight",      # 19 - stress/eye opening
+    "eyeWideLeft",         # 20 - attention/eye opening
+    "eyeWideRight",        # 21 - attention/eye opening
+    "mouthSmileLeft",      # 22 - stress/mood + cheek ROI
+    "mouthSmileRight"      # 23 - stress/mood + cheek ROI
 ]
 
 

@@ -1,8 +1,7 @@
 from collections import deque
-import time
-from ROI._landmarker import FaceLandmarkerWrapper
-from ROI._dynamic_roi import get_region,extract_patches, euler_angles
-from ROI.stabilization import ema,Stabilization
+from ROI.landmarker import FaceLandmarkerWrapper
+from ROI.dynamic import get_region,extract_patches, euler_angles
+from ROI.stabilization import Stabilization
 from ROI.expressions import Expression
 from config import regions
 
@@ -22,7 +21,7 @@ class Extract:
         self.fps = 0.0
         self.fps_buffer = deque(maxlen=30)
         self.blendcoff = None
-        self.blink = {}
+        self.attention = {}
         self.weights ={key: deque(maxlen=5) for key in regions}
         self.count = 0
 
@@ -33,12 +32,12 @@ class Extract:
         self.fps = self.get_fps(timestamp, self.fps_buffer)
 
         if self.landmarks is None:
-            self._reset()
+            self.reset()
         else:
             self.landmarks = self.stabilizer.process(self.landmarks,timestamp)
             self.thetas = euler_angles(self.t_matrix)
             if self.count > 60:
-                self.blink = self.expressions.get_cognitive(self.blendcoff, timestamp)
+                self.attention = self.expressions.get_attention(self.blendcoff, self.thetas, timestamp)
                 self.region = get_region(self.landmarks, self.thetas,self.blendcoff)
                 self.patches = extract_patches(frame, self.region, self.weights)
                 self.valid_rois = [i for i in self.patches.keys()]
@@ -46,23 +45,23 @@ class Extract:
             self.count+=1
 
 
-
+    #to get the actual prcessing fps
     @staticmethod
     def get_fps(timestamp, fps_window):
         fps_window.append(timestamp)
         if len(fps_window) >= 2:
             duration = fps_window[-1] - fps_window[0]
-            fps_actual = (len(fps_window) - 1) / duration if duration > 0 else 0
+            fps = (len(fps_window) - 1) / duration if duration > 0 else 0
         else:
-            fps_actual = 0.0
+            fps = 0.0
 
-        return fps_actual
+        return fps
 
 
 
 
     #resettinf all class values
-    def _reset(self):
+    def reset(self):
         self.landmarks = None
         self.region = {}
         self.t_matrix = None

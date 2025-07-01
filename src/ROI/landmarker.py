@@ -6,7 +6,7 @@ import mediapipe as mp
 from mediapipe.tasks.python.vision import FaceLandmarker
 from mediapipe.tasks import python as mp_tasks
 from mediapipe.tasks.python.vision.face_landmarker import FaceLandmarkerOptions
-from config import blend_keys
+from config import needed_blendshapes
 
 class FaceLandmarkerWrapper:
     def __init__(self):
@@ -27,16 +27,15 @@ class FaceLandmarkerWrapper:
             lms = result.face_landmarks[0]
             raw_cords = np.array([[lm.x * w, lm.y * h] for lm in lms], dtype=np.float32)
             t_matrix = np.array(result.facial_transformation_matrixes[0].data).reshape(4, 4)[:3, :3]
-            blend = self.get_blendcoff(result.face_blendshapes,blend_keys)
+            blend = self.get_blendcoff(result.face_blendshapes,needed_blendshapes)
             return raw_cords, t_matrix, blend
         else:
             return None, None,None
 
-    # ========= mediapipe model helpers ====================================
-
+    #convert to 720 p for processing
     @staticmethod
     def convert(frame):
-        target_height = 640
+        target_height = 720
         h, w = frame.shape[:2]
         if h > target_height:
             scale = target_height / h
@@ -44,7 +43,6 @@ class FaceLandmarkerWrapper:
         else:
             resized_frame = frame
         return cv2.cvtColor(resized_frame, cv2.COLOR_BGR2RGB)
-
     @staticmethod
     def get_blendcoff(blendshapes,keys):
         xd = [item for sublist in blendshapes for item in sublist]
@@ -68,9 +66,9 @@ class FaceLandmarkerWrapper:
             output_facial_transformation_matrixes=True,
             num_faces=1,
             running_mode=mp_tasks.vision.RunningMode.VIDEO,
-            min_face_detection_confidence=0.3,
-            min_face_presence_confidence=0.3,
-            min_tracking_confidence=0.3
+            min_face_detection_confidence=0.7,
+            min_face_presence_confidence=0.7,
+            min_tracking_confidence=0.7
         )
 
 
