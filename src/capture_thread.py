@@ -21,7 +21,7 @@ class CaptureThread:
         if not self.cap.isOpened():
             raise IOError
         self.use_video = isinstance(camera_id, str)  # vid
-        self.queue = queue.Queue(maxsize=2000) ##set this to one in windows,driver is shit
+        self.queue = queue.Queue(maxsize=1) ##set this to one in windows,driver is shit
         self.running = threading.Event()
         self.thread = threading.Thread(target=self._capture_loop, daemon=True)  # daemon true just allows main to exit
         self.debug = debug

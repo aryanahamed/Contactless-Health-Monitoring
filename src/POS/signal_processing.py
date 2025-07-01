@@ -112,7 +112,7 @@ def select_best_signal(input_data):
     
     valid_regions = {}
     # Primarily using forehead because always better accuracy than cheeks.
-    for region in ["forehead"]:
+    for region in ["forehead", 'left_cheek', 'right_cheek']:
         if region in input_data and len(input_data[region]) == len(timestamps_np):
             rgb_array = np.asarray(input_data[region], dtype=np.float64)
             if rgb_array.size > 0:

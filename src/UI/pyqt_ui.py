@@ -49,6 +49,8 @@ class AppWindow(QMainWindow):
         self.plot_worker = None
         self.start_time = None
         self.logic_function = logic_function
+        self.hr_history = []
+        self.br_history = []
 
         self.setStyleSheet(f"""
             QMainWindow {{ background-color: {COLOR_BACKGROUND}; font-family: "Roboto", Arial, sans-serif; }}
@@ -388,6 +390,8 @@ class AppWindow(QMainWindow):
         # Call this to reset everything
         self.stop_monitoring()
         self.start_time = None
+        self.hr_history = []
+        self.br_history = []
         
         # Reset plot worker data if it exists
         if self.plot_worker:
@@ -510,7 +514,16 @@ class AppWindow(QMainWindow):
         
         hr_val = data_point.get("hr", {}).get("value")
         br_val = data_point.get("br", {}).get("value")
-        self.update_status("monitoring", avg_hr=hr_val, avg_br=br_val)
+
+        if hr_val is not None and hr_val > 0:
+            self.hr_history.append(hr_val)
+        if br_val is not None and br_val > 0:
+            self.br_history.append(br_val)
+
+        avg_hr = np.mean(self.hr_history) if self.hr_history else None
+        avg_br = np.mean(self.br_history) if self.br_history else None
+
+        self.update_status("monitoring", avg_hr=avg_hr, avg_br=avg_br)
         
         timestamp = data_point.get("timestamp")
         if timestamp is not None and self.start_time is None:

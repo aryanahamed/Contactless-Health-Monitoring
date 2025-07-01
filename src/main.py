@@ -18,7 +18,7 @@ import sys
 def main_logic(emit_frame, emit_metrics, should_stop):
     roi = Extract()
     series =  TimeSeries()
-    capture = CaptureThread("src/vid.avi", debug=True) # Change to 0 for webcam
+    capture = CaptureThread(0, debug=True) # Change to 0 for webcam
     capture.start()
     frame_count = 0
     fps_window = deque(maxlen=30)  # last 30 timestamps
@@ -51,13 +51,17 @@ def main_logic(emit_frame, emit_metrics, should_stop):
                 if frame_count % DETECTION_INTERVAL == 0:
                     # Find best signal
                     best_filt, pre_window, _, best_ts, best_fps, quality, _ = signal_processing.select_best_signal(timeseries)
-                    # Find HR HRV
-                    last_hr, last_sdnn, last_rmssd, hrv_quality_status = signal_pipeline.process_hr_from_signal(
+                    # Find HR
+                    last_hr = signal_pipeline.process_hr_from_signal(
                         best_filt, best_ts, best_fps, quality
                     )
                     # Find BR
                     last_br = breathing_pipeline.process_breathing(
                         best_filt, best_ts, best_fps, quality
+                    )
+                    # Find HRV
+                    last_sdnn, last_rmssd, hrv_quality_status = signal_pipeline.process_hrv_from_signal(
+                        best_filt, best_ts, best_fps, last_hr
                     )
                     
                     # Append for testing purposes

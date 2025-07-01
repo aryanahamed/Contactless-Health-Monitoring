@@ -14,8 +14,8 @@ _br_last_valid_br = 15.0
 BR_OUTLIER_WINDOW_SIZE = 8
 BR_MEDIAN_WINDOW_SIZE = 5
 BR_EMA_ALPHA = 0.2
-MAX_BR_CHANGE_PER_SEC = 2
-BR_MIN_QUALITY_THRESHOLD = 1.5
+MAX_BR_CHANGE_PER_SEC = 4
+BR_MIN_QUALITY_THRESHOLD = 1.7
 PHYSIO_MIN_BR = 8
 PHYSIO_MAX_BR = 35
 BR_MIN_MAD_FOR_Z_SCORE_CALC = 0.5
@@ -32,7 +32,7 @@ def reset_br_filters():
     _br_last_valid_br = 15.0
 
 
-def reject_br_outliers(new_br, current_timestamp, quality_score):
+def reject_br_outliers(new_br, current_timestamp, quality_score, current_smoothed_br):
     # Rejects low quality BR values
     global _br_last_timestamp, _br_last_valid_br, _br_history
 
@@ -53,7 +53,12 @@ def reject_br_outliers(new_br, current_timestamp, quality_score):
         time_diff = current_timestamp - _br_last_timestamp
         if time_diff > 0:
             max_allowed_change = MAX_BR_CHANGE_PER_SEC * time_diff
-            if abs(new_br - _br_last_valid_br) > max_allowed_change:
+            
+            # Use the smoothed brpm as the reference to prevent drift
+            reference_br = current_smoothed_br if current_smoothed_br is not None else _br_last_valid_br
+            actual_change = abs(new_br - reference_br)
+
+            if actual_change > max_allowed_change:
                 return None
 
     # Outlier rejection using modified z-score
@@ -105,7 +110,7 @@ def smooth_br_multi_stage(new_br, timestamp, quality_score=1.0):
     # This is the main entry
     global _br_history, _br_quality_history, _br_ema_value
 
-    filtered_br = reject_br_outliers(new_br, timestamp, quality_score)
+    filtered_br = reject_br_outliers(new_br, timestamp, quality_score, _br_ema_value)
     
     if filtered_br is not None:
         _br_history.append(filtered_br)
