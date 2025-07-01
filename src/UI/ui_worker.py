@@ -35,8 +35,8 @@ class PlotUpdateWorker(QThread):
         
         self.hr_history = []
         self.br_history = []
-        self.sdnn_history = []
-        self.rmssd_history = []
+        # self.sdnn_history = []
+        # self.rmssd_history = []
 
     @pyqtSlot(dict)
     def process_data_point(self, data_point):
@@ -61,13 +61,13 @@ class PlotUpdateWorker(QThread):
             if br_val is not None:
                 self.br_history.append((timestamp, br_val))
             
-            sdnn_val = data_point.get("sdnn", {}).get("value")
-            if sdnn_val is not None and sdnn_val != 0:
-                self.sdnn_history.append((timestamp, sdnn_val))
+            # sdnn_val = data_point.get("sdnn", {}).get("value")
+            # if sdnn_val is not None and sdnn_val != 0:
+            #     self.sdnn_history.append((timestamp, sdnn_val))
             
-            rmssd_val = data_point.get("rmssd", {}).get("value")
-            if rmssd_val is not None and rmssd_val != 0:
-                self.rmssd_history.append((timestamp, rmssd_val))
+            # rmssd_val = data_point.get("rmssd", {}).get("value")
+            # if rmssd_val is not None and rmssd_val != 0:
+            #     self.rmssd_history.append((timestamp, rmssd_val))
             
             # prepare data for plotting and emit to UI
             plot_data = self._process_plot_arrays(data_point)
@@ -98,8 +98,8 @@ class PlotUpdateWorker(QThread):
         # Prepare arrays for each metric for plotting
         hr_times, hr_values = get_plot_arrays(self.hr_history)
         br_times, br_values = get_plot_arrays(self.br_history)
-        sdnn_times, sdnn_values = get_plot_arrays(self.sdnn_history)
-        rmssd_times, rmssd_values = get_plot_arrays(self.rmssd_history)
+        # sdnn_times, sdnn_values = get_plot_arrays(self.sdnn_history)
+        # rmssd_times, rmssd_values = get_plot_arrays(self.rmssd_history)
         
         # Use last HR time as the current elapsed time or 0 if no data
         current_elapsed_time = hr_times[-1] if hr_times.size > 0 else 0
@@ -108,8 +108,8 @@ class PlotUpdateWorker(QThread):
             'rppg_signal_data': (rppg_times, rppg_values),
             'hr_data': (hr_times, hr_values),
             'br_data': (br_times, br_values),
-            'sdnn_data': (sdnn_times, sdnn_values),
-            'rmssd_data': (rmssd_times, rmssd_values),
+            # 'sdnn_data': (sdnn_times, sdnn_values),
+            # 'rmssd_data': (rmssd_times, rmssd_values),
             'current_time': current_elapsed_time
         }
 
@@ -118,8 +118,8 @@ class PlotUpdateWorker(QThread):
         self.start_time = None
         self.hr_history.clear()
         self.br_history.clear()
-        self.sdnn_history.clear()
-        self.rmssd_history.clear()
+        # self.sdnn_history.clear()
+        # self.rmssd_history.clear()
 
     def stop(self):
         print("Requesting plot worker to stop")

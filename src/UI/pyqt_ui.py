@@ -39,7 +39,7 @@ class AppWindow(QMainWindow):
         # Change window title here
         self.setWindowTitle("Contactless Health Monitoring")
         # Change window size here
-        self.setGeometry(100, 100, 1500, 800)
+        self.setGeometry(100, 100, 1280, 680)
         self._center_window()
 
         pg.setConfigOption('background', COLOR_CONTENT_BACKGROUND)
@@ -123,7 +123,7 @@ class AppWindow(QMainWindow):
         video_layout = QVBoxLayout(video_group_box)
         self.video_display_label = QLabel("Press Start to Begin Monitoring")
         self.video_display_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.video_display_label.setMinimumSize(440, 320)
+        self.video_display_label.setMinimumSize(600, 440)
         self.video_display_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         video_layout.addWidget(self.video_display_label)
         self._apply_shadow_effect(video_group_box)
@@ -132,21 +132,21 @@ class AppWindow(QMainWindow):
         self.rppg_signal_curve = self.rppg_plot_widget.getPlotItem().plot(pen=PLOT_PEN_SIGNAL)
         self.rppg_plot_widget.getPlotItem().getAxis('left').setWidth(50)
 
-        self.hr_plot_widget = self._create_plot("HR over Time", "HR (bpm)", PLOT_PEN_HR, y_range=(40, 180))
+        self.hr_plot_widget = self._create_plot("HR over Time", "HR (bpm)", PLOT_PEN_HR)
         self.hr_curve = self.hr_plot_widget.getPlotItem().listDataItems()[0]
 
-        self.hrv_plot_widget = self._create_plot("HRV over Time", "HRV (ms)", y_range=(0, 200))
-        self.hrv_plot_widget.addLegend(offset=(-10, 0))
-        self.sdnn_curve = self.hrv_plot_widget.getPlotItem().plot(pen=PLOT_PEN_SDNN, name="🟢 SDNN")
-        self.rmssd_curve = self.hrv_plot_widget.getPlotItem().plot(pen=PLOT_PEN_RMSSD, name="🟡 RMSSD")
+        # self.hrv_plot_widget = self._create_plot("HRV over Time", "HRV (ms)")
+        # self.hrv_plot_widget.addLegend(offset=(-10, 0))
+        # self.sdnn_curve = self.hrv_plot_widget.getPlotItem().plot(pen=PLOT_PEN_SDNN, name="🟢 SDNN")
+        # self.rmssd_curve = self.hrv_plot_widget.getPlotItem().plot(pen=PLOT_PEN_RMSSD, name="🟡 RMSSD")
 
-        self.br_plot_widget = self._create_plot("BR over Time", "BR (brpm)", PLOT_PEN_BR, y_range=(6, 30))
+        self.br_plot_widget = self._create_plot("BR over Time", "BR (brpm)", PLOT_PEN_BR)
         self.br_curve = self.br_plot_widget.getPlotItem().listDataItems()[0]
 
-        right_column_layout.addWidget(video_group_box, stretch=2)
+        right_column_layout.addWidget(video_group_box, stretch=3)
         right_column_layout.addWidget(self.rppg_plot_widget, stretch=1)
         right_column_layout.addWidget(self.hr_plot_widget, stretch=1)
-        right_column_layout.addWidget(self.hrv_plot_widget, stretch=1)
+        # right_column_layout.addWidget(self.hrv_plot_widget, stretch=1)
         right_column_layout.addWidget(self.br_plot_widget, stretch=1)
 
         self.main_layout.addWidget(left_column_widget, stretch=1)
@@ -155,11 +155,11 @@ class AppWindow(QMainWindow):
     def _create_info_row(self, label_text):
         row_layout = QHBoxLayout()
         label = QLabel(label_text)
-        label.setFont(QFont("Segoe UI", 10))
+        label.setFont(QFont("Segoe UI", 9))
         label.setStyleSheet(f"color: {COLOR_TEXT_SECONDARY};")
 
         value_label = QLabel("N/A")
-        value_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        value_label.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
         value_label.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY};")
         value_label.setAlignment(Qt.AlignmentFlag.AlignRight)
 
@@ -176,7 +176,7 @@ class AppWindow(QMainWindow):
 
     def _create_info_subheader(self, text):
         label = QLabel(text)
-        font = QFont("Segoe UI", 9, QFont.Weight.Bold)
+        font = QFont("Segoe UI", 8, QFont.Weight.Bold)
         font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1)
         label.setFont(font)
         label.setStyleSheet(f"""
@@ -197,7 +197,7 @@ class AppWindow(QMainWindow):
         main_layout.setSpacing(8)
 
         title_label = QLabel("Info Panel")
-        title_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        title_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
         title_label.setStyleSheet(f"color: {COLOR_ACCENT_PRIMARY};")
         main_layout.addWidget(title_label)
         main_layout.addSpacing(5)
@@ -267,12 +267,12 @@ class AppWindow(QMainWindow):
         status_layout = QHBoxLayout()
         self.status_icon_label = QLabel()
         self.status_text_label = QLabel("Ready")
-        self.status_text_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        self.status_text_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
         status_layout.addWidget(self.status_icon_label)
         status_layout.addWidget(self.status_text_label, stretch=1)
 
-        summary_font = QFont("Segoe UI", 10)
-        summary_value_font = QFont("Segoe UI", 10, QFont.Weight.Bold)
+        summary_font = QFont("Segoe UI", 9)
+        summary_value_font = QFont("Segoe UI", 9, QFont.Weight.Bold)
 
         def create_summary_row(label_text):
             row_layout = QHBoxLayout()
@@ -401,8 +401,8 @@ class AppWindow(QMainWindow):
         self.rppg_signal_curve.setData([], [])
         self.hr_curve.setData([], [])
         self.br_curve.setData([], [])
-        self.sdnn_curve.setData([], [])
-        self.rmssd_curve.setData([], [])
+        # self.sdnn_curve.setData([], [])
+        # self.rmssd_curve.setData([], [])
         
         self._reset_ui_values()
         self.video_display_label.setText("Press Start to Begin Monitoring")
@@ -429,7 +429,7 @@ class AppWindow(QMainWindow):
         self.gaze_status_info_value_label.setText("N/A")
 
         self.stress_value_label.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY};")
-        self.stress_value_label.setFont(QFont("Segoe UI", 24, QFont.Weight.Bold))
+        self.stress_value_label.setFont(QFont("Segoe UI", 23, QFont.Weight.Bold))
         self.avg_hr_label.setText("N/A")
         self.avg_br_label.setText("N/A")
         self.update_status(status="ready")
@@ -447,14 +447,14 @@ class AppWindow(QMainWindow):
             title_bar_layout.addWidget(icon_label)
 
         title_label = QLabel(title)
-        title_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        title_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
         title_label.setStyleSheet(f"color: {COLOR_ACCENT_PRIMARY}; background-color: transparent;")
         title_bar_layout.addWidget(title_label)
         title_bar_layout.addStretch()
 
         content_layout = QHBoxLayout()
         value_label = QLabel("N/A")
-        value_label.setFont(QFont("Segoe UI", 24, QFont.Weight.Bold))
+        value_label.setFont(QFont("Segoe UI", 23, QFont.Weight.Bold))
         value_label.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY};")
         value_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         
@@ -466,7 +466,7 @@ class AppWindow(QMainWindow):
         self._setup_glow_effect(value_label, glow_colors.get(key_prefix, COLOR_ACCENT_PRIMARY))
 
         unit_label = QLabel("")
-        unit_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Normal))
+        unit_label.setFont(QFont("Segoe UI", 9, QFont.Weight.Normal))
         unit_label.setStyleSheet(f"color: {COLOR_TEXT_SECONDARY};")
         unit_label.setAlignment(Qt.AlignmentFlag.AlignBottom)
         content_layout.addStretch()
@@ -480,7 +480,7 @@ class AppWindow(QMainWindow):
         setattr(self, f"{key_prefix}_unit_label", unit_label)
         return group_box
 
-    def _create_plot(self, title, ylabel, pen=None, y_range=None):
+    def _create_plot(self, title, ylabel, pen=None):
         plot_widget = PlotWidget(title=title)
         plot_widget.setLabel('left', ylabel)
         plot_widget.setLabel('bottom', "Time (s)")
@@ -488,9 +488,7 @@ class AppWindow(QMainWindow):
         plot_widget.getAxis('left').setTextPen(COLOR_TEXT_SECONDARY)
         plot_widget.getAxis('bottom').setTextPen(COLOR_TEXT_SECONDARY)
         plot_widget.getAxis('left').setWidth(50)
-
-        if y_range:
-            plot_widget.setYRange(y_range[0], y_range[1], padding=0)
+        plot_widget.getPlotItem().enableAutoRange()
 
         if pen: plot_widget.plot(pen=pen)
         self._apply_shadow_effect(plot_widget)
@@ -553,7 +551,7 @@ class AppWindow(QMainWindow):
                     # Change color for stress level
                     stress_color = {"Low Intensity": COLOR_ACCENT_SECONDARY, "Medium Intensity": COLOR_ACCENT_WARN, "High Intensity": COLOR_ACCENT_ALERT}.get(current_text, COLOR_TEXT_PRIMARY)
                     value_label.setStyleSheet(f"color: {stress_color};")
-                    value_label.setFont(QFont("Segoe UI", 20 if current_text != "N/A" else 24, QFont.Weight.Bold))
+                    value_label.setFont(QFont("Segoe UI", 19 if current_text != "N/A" else 23, QFont.Weight.Bold))
     
         # HRV metrics
         sdnn_data = metrics_data.get("sdnn")
@@ -628,25 +626,25 @@ class AppWindow(QMainWindow):
             rppg_times, rppg_values = plot_data.get('rppg_signal_data', (np.array([]), np.array([])))
             hr_times, hr_values = plot_data['hr_data']
             br_times, br_values = plot_data['br_data']
-            sdnn_times, sdnn_values = plot_data['sdnn_data']
-            rmssd_times, rmssd_values = plot_data['rmssd_data']
+            # sdnn_times, sdnn_values = plot_data['sdnn_data']
+            # rmssd_times, rmssd_values = plot_data['rmssd_data']
             current_elapsed_time = plot_data['current_time']
     
             self.rppg_signal_curve.setData(rppg_times, rppg_values)
-            if rppg_times.size > 1:
-                self.rppg_plot_widget.setXRange(rppg_times[0], rppg_times[-1])
+            # if rppg_times.size > 1:
+            #     self.rppg_plot_widget.setXRange(rppg_times[0], rppg_times[-1])
             
             self.hr_curve.setData(hr_times, hr_values)
             self.br_curve.setData(br_times, br_values)
-            self.sdnn_curve.setData(sdnn_times, sdnn_values)
-            self.rmssd_curve.setData(rmssd_times, rmssd_values)
+            # self.sdnn_curve.setData(sdnn_times, sdnn_values)
+            # self.rmssd_curve.setData(rmssd_times, rmssd_values)
     
             if hr_times.size > 0:
                 # Keep time window for plots at last 30 seconds
                 view_end_time = current_elapsed_time + 1
                 view_start_time = max(0, view_end_time - 30)
     
-                for plot in [self.hr_plot_widget, self.br_plot_widget, self.hrv_plot_widget]:
+                for plot in [self.hr_plot_widget, self.br_plot_widget]:
                     plot.getPlotItem().setXRange(view_start_time, view_end_time, padding=0)
                     
         except Exception as e:
