@@ -13,9 +13,9 @@ _br_last_valid_br = 15.0
 # BR Configs
 BR_OUTLIER_WINDOW_SIZE = 8
 BR_MEDIAN_WINDOW_SIZE = 5
-BR_EMA_ALPHA = 0.15
+BR_EMA_ALPHA = 0.2
 MAX_BR_CHANGE_PER_SEC = 2
-BR_MIN_QUALITY_THRESHOLD = 3.0
+BR_MIN_QUALITY_THRESHOLD = 1.5
 PHYSIO_MIN_BR = 8
 PHYSIO_MAX_BR = 35
 BR_MIN_MAD_FOR_Z_SCORE_CALC = 0.5
@@ -39,7 +39,10 @@ def reject_br_outliers(new_br, current_timestamp, quality_score):
     if new_br is None or np.isnan(new_br):
         return None
 
-    if quality_score < BR_MIN_QUALITY_THRESHOLD:
+    is_establishing_baseline = len(_br_history) == 0
+    required_quality = 3.0 if is_establishing_baseline else BR_MIN_QUALITY_THRESHOLD
+
+    if quality_score < required_quality:
         return None
 
     if new_br < PHYSIO_MIN_BR or new_br > PHYSIO_MAX_BR:

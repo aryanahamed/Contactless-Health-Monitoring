@@ -128,9 +128,9 @@ class AppWindow(QMainWindow):
 
         self.rppg_plot_widget = self._create_plot("rPPG Signal", "Amplitude")
         self.rppg_signal_curve = self.rppg_plot_widget.getPlotItem().plot(pen=PLOT_PEN_SIGNAL)
-        self.rppg_plot_widget.getPlotItem().getAxis('left').setWidth(50) # Give it some space
+        self.rppg_plot_widget.getPlotItem().getAxis('left').setWidth(50)
 
-        self.hr_plot_widget = self._create_plot("HR over Time", "HR (bpm)", PLOT_PEN_HR, y_range=(40, 150))
+        self.hr_plot_widget = self._create_plot("HR over Time", "HR (bpm)", PLOT_PEN_HR, y_range=(40, 180))
         self.hr_curve = self.hr_plot_widget.getPlotItem().listDataItems()[0]
 
         self.hrv_plot_widget = self._create_plot("HRV over Time", "HRV (ms)", y_range=(0, 200))
@@ -138,7 +138,7 @@ class AppWindow(QMainWindow):
         self.sdnn_curve = self.hrv_plot_widget.getPlotItem().plot(pen=PLOT_PEN_SDNN, name="🟢 SDNN")
         self.rmssd_curve = self.hrv_plot_widget.getPlotItem().plot(pen=PLOT_PEN_RMSSD, name="🟡 RMSSD")
 
-        self.br_plot_widget = self._create_plot("BR over Time", "BR (brpm)", PLOT_PEN_BR, y_range=(5, 30))
+        self.br_plot_widget = self._create_plot("BR over Time", "BR (brpm)", PLOT_PEN_BR, y_range=(6, 30))
         self.br_curve = self.br_plot_widget.getPlotItem().listDataItems()[0]
 
         right_column_layout.addWidget(video_group_box, stretch=2)

@@ -3,8 +3,8 @@ import time
 from collections import deque
 
 # Globals
-_bpm_history = deque(maxlen=30)
-_quality_history = deque(maxlen=30)
+_bpm_history = deque(maxlen=20)
+_quality_history = deque(maxlen=20)
 _median_buffer = deque(maxlen=7)
 _ema_value = None
 _last_timestamp = None
@@ -13,9 +13,9 @@ _last_valid_bpm = 70.0
 # Configs
 OUTLIER_WINDOW_SIZE = 8
 MEDIAN_WINDOW_SIZE = 7
-EMA_ALPHA = 0.12  # More smoothing = lower alpha
+EMA_ALPHA = 0.2  # More smoothing = lower alpha
 MAX_BPM_CHANGE_PER_SEC = 3
-MIN_QUALITY_THRESHOLD = 1.2
+MIN_QUALITY_THRESHOLD = 1.7
 PHYSIO_MIN_BPM = 40
 PHYSIO_MAX_BPM = 180
 MIN_MAD_FOR_Z_SCORE_CALC = 0.5
@@ -31,7 +31,7 @@ def reset_all_filters():
     _last_valid_bpm = 70.0
 
 
-def reject_outliers(new_bpm, quality_score):
+def reject_outliers(new_bpm, quality_score, current_smoothed_bpm):
     # Reject BPM values that are outliers
     global _last_timestamp, _last_valid_bpm
     
@@ -39,7 +39,7 @@ def reject_outliers(new_bpm, quality_score):
         return None
     
     is_establishing_baseline = len(_bpm_history) == 0
-    required_quality = 3.5 if is_establishing_baseline else MIN_QUALITY_THRESHOLD
+    required_quality = 3.0 if is_establishing_baseline else MIN_QUALITY_THRESHOLD
 
     if quality_score < required_quality:
         return None
@@ -55,12 +55,17 @@ def reject_outliers(new_bpm, quality_score):
         time_diff = current_time - _last_timestamp
         if time_diff > 0:
             max_allowed_change = MAX_BPM_CHANGE_PER_SEC
-            actual_change = abs(new_bpm - _last_valid_bpm)
+            
+            # Use the smoothed bpm as the reference to prevent drift
+            reference_bpm = current_smoothed_bpm if current_smoothed_bpm is not None else _last_valid_bpm
+            actual_change = abs(new_bpm - reference_bpm)
+
             stuck_duration = current_time - _last_timestamp
             
             # Can tweek the values if needed
-            if stuck_duration > 2.0 and quality_score > 3.0:
+            if stuck_duration > 2.0 and quality_score > 4.0:
                 reset_all_filters()
+                pass
             elif actual_change > max_allowed_change:
                 return None
     
@@ -107,8 +112,8 @@ def apply_exponential_smoothing(median_bpm):
 
 def smooth_bpm_multi_stage(new_bpm, quality_score=1.0):
     # Main multi smoothing
-    global _bpm_history, _quality_history
-    filtered_bpm = reject_outliers(new_bpm, quality_score)
+    global _bpm_history, _quality_history, _ema_value
+    filtered_bpm = reject_outliers(new_bpm, quality_score, _ema_value)
     
     if filtered_bpm is not None:
         _bpm_history.append(filtered_bpm)
