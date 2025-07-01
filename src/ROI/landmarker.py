@@ -66,10 +66,7 @@ class FaceLandmarkerWrapper:
             output_facial_transformation_matrixes=True,
             num_faces=1,
             running_mode=mp_tasks.vision.RunningMode.VIDEO,
-            min_face_detection_confidence=0.7,
-            min_face_presence_confidence=0.7,
-            min_tracking_confidence=0.7
+            min_face_detection_confidence=0.5,
+            min_face_presence_confidence=0.5,
+            min_tracking_confidence=0.5
         )
-
-
-

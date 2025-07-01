@@ -3,7 +3,7 @@ import numpy as np
 import time
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout,
                              QHBoxLayout, QGridLayout, QGroupBox, QSizePolicy, QGraphicsDropShadowEffect, QPushButton, QFrame)
-from PyQt6.QtGui import QPixmap, QImage, QFont, QColor
+from PyQt6.QtGui import QPixmap, QImage, QFont, QColor, QScreen
 from PyQt6.QtCore import Qt, pyqtSlot, QPropertyAnimation, QEasingCurve
 import pyqtgraph as pg
 from pyqtgraph import PlotWidget
@@ -21,7 +21,7 @@ COLOR_TEXT_SECONDARY = "#dcdde1"
 COLOR_ACCENT_PRIMARY = "#00a8ff"
 COLOR_ACCENT_SECONDARY = "#4cd137"
 COLOR_ACCENT_WARN = "#fbc531"
-COLOR_ACCENT_ALERT = "#e84118"
+COLOR_ACCENT_ALERT = "#c22e2e"
 COLOR_SHADOW = "#181a1f"
 
 # Plotting colors
@@ -39,7 +39,8 @@ class AppWindow(QMainWindow):
         # Change window title here
         self.setWindowTitle("Contactless Health Monitoring")
         # Change window size here
-        self.setGeometry(100, 100, 1400, 900)
+        self.setGeometry(100, 100, 1500, 800)
+        self._center_window()
 
         pg.setConfigOption('background', COLOR_CONTENT_BACKGROUND)
         pg.setConfigOption('foreground', COLOR_TEXT_SECONDARY)
@@ -68,6 +69,11 @@ class AppWindow(QMainWindow):
 
         self._init_ui_components()
         self.reset_monitoring()
+
+    def _center_window(self):
+        # Center the window on the screen
+        screen = QScreen.availableGeometry(QApplication.primaryScreen())
+        self.move(screen.center() - self.frameGeometry().center())
 
     def _apply_shadow_effect(self, widget):
         shadow = QGraphicsDropShadowEffect()
@@ -289,17 +295,22 @@ class AppWindow(QMainWindow):
         self.start_button = QPushButton("Start")
         self.stop_button = QPushButton("Stop")
         self.reset_button = QPushButton("Reset")
+        self.exit_button = QPushButton("Exit")
 
         self.start_button.clicked.connect(self.start_monitoring)
         self.stop_button.clicked.connect(self.stop_monitoring)
         self.reset_button.clicked.connect(self.reset_monitoring)
+        self.exit_button.clicked.connect(self.close)
 
-        for btn in [self.start_button, self.stop_button, self.reset_button]:
+        self.exit_button.setStyleSheet(f"background-color: {COLOR_ACCENT_ALERT}; border-color: {COLOR_ACCENT_ALERT};")
+
+        for btn in [self.start_button, self.stop_button, self.reset_button, self.exit_button]:
             btn.setMinimumWidth(70)
         buttons_layout.addStretch()
         buttons_layout.addWidget(self.start_button)
         buttons_layout.addWidget(self.stop_button)
         buttons_layout.addWidget(self.reset_button)
+        buttons_layout.addWidget(self.exit_button)
         buttons_layout.addStretch()
         main_layout.addLayout(buttons_layout)
 
@@ -627,6 +638,10 @@ class AppWindow(QMainWindow):
                     
         except Exception as e:
             print(f"Error applying plot data: {e}")
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape:
+            self.close()
 
     def closeEvent(self, event):
         print("Closing application - stopping all workers")

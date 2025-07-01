@@ -21,7 +21,7 @@ roi_idx = {67,109,10,338,297,299,336,9,107,69,67,108,151,337,
 # buffer settings for time series
 window = 15
 hz = 30
-buffer_size = (hz * window) + 5
+buffer_size = (hz * window)
 
 # regions we care about for rPPG
 regions = ["forehead", "left_cheek", "right_cheek"]

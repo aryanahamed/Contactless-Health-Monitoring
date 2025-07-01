@@ -18,7 +18,7 @@ import sys
 def main_logic(emit_frame, emit_metrics, should_stop):
     roi = Extract()
     series =  TimeSeries()
-    capture = CaptureThread(0, debug=True) # Change to 0 for webcam
+    capture = CaptureThread("src/vid.avi", debug=True) # Change to 0 for webcam
     capture.start()
     frame_count = 0
     fps_window = deque(maxlen=30)  # last 30 timestamps
@@ -42,62 +42,61 @@ def main_logic(emit_frame, emit_metrics, should_stop):
                     break
                 continue
             fps_window.append(timestamp)
-
-            if frame_count % DETECTION_INTERVAL == 0:
-                roi.process_frame(frame, timestamp)
-                vis_frame = draw(frame, roi)
-                emit_frame(vis_frame)
-                series.add(roi.patches, timestamp)
-                timeseries = series.get()
+            roi.process_frame(frame, timestamp)
+            vis_frame = draw(frame, roi)
+            emit_frame(vis_frame)
+            series.add(roi.patches, timestamp)
+            timeseries = series.get()
             if timeseries:
-                # Find best signal
-                best_filt, pre_window, _, best_ts, best_fps, quality, _ = signal_processing.select_best_signal(timeseries)
-                # Find HR HRV
-                last_hr, last_sdnn, last_rmssd, hrv_quality_status = signal_pipeline.process_hr_from_signal(
-                    best_filt, best_ts, best_fps, quality
-                )
-                # Find BR
-                last_br = breathing_pipeline.process_breathing(
-                    best_filt, best_ts, best_fps, quality
-                )
-                
-                # Append for testing purposes
-                if last_hr is not None: hr_data.append((timestamp, last_hr))
-                if last_br is not None: br_data.append((timestamp, last_br))
-                
-                # To send to UI
-                metrics_data = {
-                    "timestamp": timestamp,
-                    "hr": {"value": last_hr, "unit": "bpm"},
-                    "br": {"value": last_br, "unit": "brpm"},
-                    "sdnn": {"value": last_sdnn, "unit": "ms"},
-                    "rmssd": {"value": last_rmssd, "unit": "ms"},
-                    "stress": {"value": None, "unit": ""},
-                    "rppg_signal": {"timestamps": best_ts, "values": pre_window},
-                    "quality_score": {"value": round(quality, 2)},
-
-                    "fps": {"value": roi.fps},
-                    "yaw": {"value": roi.thetas[0] if roi.thetas else None},
-                    "pitch": {"value": roi.thetas[1] if roi.thetas else None},
-                    "roll": {"value": roi.thetas[2] if roi.thetas else None},
-                    "cognitive": roi.attention
-                }
-
-                # Stress detection
-                predicted_stress = None
-                if rf_model_loaded and all(v is not None for v in [last_hr, last_sdnn, last_rmssd]):
-                    predicted_stress, _ = stress_detection.predict_stress(
-                        last_hr, last_sdnn, last_rmssd,
-                        rf_model_loaded, scaler_loaded, label_encoder_loaded
+                if frame_count % DETECTION_INTERVAL == 0:
+                    # Find best signal
+                    best_filt, pre_window, _, best_ts, best_fps, quality, _ = signal_processing.select_best_signal(timeseries)
+                    # Find HR HRV
+                    last_hr, last_sdnn, last_rmssd, hrv_quality_status = signal_pipeline.process_hr_from_signal(
+                        best_filt, best_ts, best_fps, quality
                     )
-                    if predicted_stress:
-                        metrics_data["stress"]["value"] = predicted_stress
+                    # Find BR
+                    last_br = breathing_pipeline.process_breathing(
+                        best_filt, best_ts, best_fps, quality
+                    )
+                    
+                    # Append for testing purposes
+                    if last_hr is not None: hr_data.append((timestamp, last_hr))
+                    if last_br is not None: br_data.append((timestamp, last_br))
+                    
+                    # To send to UI
+                    metrics_data = {
+                        "timestamp": timestamp,
+                        "hr": {"value": last_hr, "unit": "bpm"},
+                        "br": {"value": last_br, "unit": "brpm"},
+                        "sdnn": {"value": last_sdnn, "unit": "ms"},
+                        "rmssd": {"value": last_rmssd, "unit": "ms"},
+                        "stress": {"value": None, "unit": ""},
+                        "rppg_signal": {"timestamps": best_ts, "values": pre_window},
+                        "quality_score": {"value": round(quality, 2)},
 
-                # Signal throttling to prevent ui queue overload
-                current_time = time.time()
-                if current_time - last_emission_time >= EMISSION_THROTTLE_INTERVAL:
-                    emit_metrics(metrics_data)
-                    last_emission_time = current_time
+                        "fps": {"value": roi.fps},
+                        "yaw": {"value": roi.thetas[0] if roi.thetas else None},
+                        "pitch": {"value": roi.thetas[1] if roi.thetas else None},
+                        "roll": {"value": roi.thetas[2] if roi.thetas else None},
+                        "cognitive": roi.attention
+                    }
+
+                    # Stress detection
+                    predicted_stress = None
+                    if rf_model_loaded and all(v is not None for v in [last_hr, last_sdnn, last_rmssd]):
+                        predicted_stress, _ = stress_detection.predict_stress(
+                            last_hr, last_sdnn, last_rmssd,
+                            rf_model_loaded, scaler_loaded, label_encoder_loaded
+                        )
+                        if predicted_stress:
+                            metrics_data["stress"]["value"] = predicted_stress
+
+                    # Signal throttling to prevent ui queue overload
+                    current_time = time.time()
+                    if current_time - last_emission_time >= EMISSION_THROTTLE_INTERVAL:
+                        emit_metrics(metrics_data)
+                        last_emission_time = current_time
 
             frame_count += 1
 
@@ -154,5 +153,7 @@ if __name__ == "__main__":
         window = AppWindow(logic_function=profiled_logic)
     else:
         window = AppWindow(logic_function=main_logic)
-    window.show()
+    # window.show() # for normal window
+    window.showMaximized() # for maximized window
+    # window.showFullScreen() # for full screen
     sys.exit(app.exec())

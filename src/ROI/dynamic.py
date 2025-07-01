@@ -94,12 +94,12 @@ def remove_euler(e_angle):
     yaw, pitch, roll = tuple(e_angle)
     to_remove = set()
     # using yaw to remove regions
-    if yaw <= -20: to_remove.update(["right_cheek", "forehead"])
-    elif yaw >= 20: to_remove.update(["left_cheek", "forehead"])
-    elif yaw <= -10: to_remove.add("right_cheek")
-    elif yaw >= 10: to_remove.add("left_cheek")
+    if yaw <= -30: to_remove.update(["right_cheek", "forehead"])
+    elif yaw >= 30: to_remove.update(["left_cheek", "forehead"])
+    elif yaw <= -20: to_remove.add("right_cheek")
+    elif yaw >= 20: to_remove.add("left_cheek")
     #pitch/roll-based removal
-    if abs(pitch) > 15 or abs(roll) > 20:
+    if abs(pitch) > 25 or abs(roll) > 30:
         to_remove.update(["forehead", "right_cheek", "left_cheek"])
 
     return list(to_remove)
@@ -112,20 +112,4 @@ def is_occluded(frame_crop):
     skin_maMsk = cv2.inRange(ycrcb, low, upper)
     skin_pixels = cv2.countNonZero(skin_maMsk)
     total_pixels = frame_crop.shape[0] * frame_crop.shape[1]
-    return skin_pixels / total_pixels < 0.7
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    return skin_pixels / total_pixels < 0.6
